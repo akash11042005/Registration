@@ -7,18 +7,11 @@ import { cn } from '@/lib/utils';
 
 const navLinks = [
   { label: 'Home', href: '/' },
-  { label: 'About', href: '/about' },
-  { label: 'Problem Statements', href: '/problem-statements' },
+  { label: 'Rules', href: '/rules' },
+  { label: 'FAQs', href: '/faqs' },
   { label: 'Timeline', href: '/timeline' },
-  {
-    label: 'Info',
-    children: [
-      { label: 'Rules', href: '/rules' },
-      { label: 'Eligibility', href: '/eligibility' },
-      { label: 'FAQs', href: '/faqs' },
-      { label: 'Contact', href: '/contact' },
-    ],
-  },
+  { label: 'Testimonials', href: '/testimonials' },
+  { label: 'Contact', href: '/contact' },
 ];
 
 export default function Navbar() {
@@ -26,7 +19,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -70,66 +62,26 @@ export default function Navbar() {
 
           {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) =>
-              link.children ? (
-                <div key={link.label} className="relative">
-                  <button
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
-                    className={cn(
-                      'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                      isScrolled
-                        ? 'text-metal-700 hover:text-navy-900 hover:bg-metal-50'
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.href}
+                to={link.href}
+                className={({ isActive }) =>
+                  cn(
+                    'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    isScrolled
+                      ? isActive
+                        ? 'text-navy-900 bg-navy-50'
+                        : 'text-metal-700 hover:text-navy-900 hover:bg-metal-50'
+                      : isActive
+                        ? 'text-navy-900 bg-white/20'
                         : 'text-metal-800 hover:text-navy-900 hover:bg-white/10'
-                    )}
-                  >
-                    {link.label}
-                    <ChevronDown className={cn('w-3.5 h-3.5 transition-transform', dropdownOpen && 'rotate-180')} />
-                  </button>
-                  <AnimatePresence>
-                    {dropdownOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute top-full left-0 mt-1 w-44 bg-white rounded-xl shadow-elevated border border-metal-100 py-1 z-50"
-                      >
-                        {link.children.map((child) => (
-                          <NavLink
-                            key={child.href}
-                            to={child.href}
-                            className="block px-4 py-2.5 text-sm text-metal-700 hover:text-navy-900 hover:bg-metal-50 transition-colors"
-                            onClick={() => setDropdownOpen(false)}
-                          >
-                            {child.label}
-                          </NavLink>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <NavLink
-                  key={link.href}
-                  to={link.href!}
-                  className={({ isActive }) =>
-                    cn(
-                      'px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                      isScrolled
-                        ? isActive
-                          ? 'text-navy-900 bg-navy-50'
-                          : 'text-metal-700 hover:text-navy-900 hover:bg-metal-50'
-                        : isActive
-                          ? 'text-navy-900 bg-white/20'
-                          : 'text-metal-800 hover:text-navy-900 hover:bg-white/10'
-                    )
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              )
-            )}
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
           </div>
 
           {/* Right actions */}
@@ -231,37 +183,21 @@ export default function Navbar() {
             className="lg:hidden bg-white border-t border-metal-100 shadow-elevated overflow-hidden"
           >
             <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
-              {navLinks.map((link) =>
-                link.children ? (
-                  <div key={link.label}>
-                    <p className="px-3 py-1 text-xs font-semibold text-metal-400 uppercase tracking-wider">{link.label}</p>
-                    {link.children.map((child) => (
-                      <NavLink
-                        key={child.href}
-                        to={child.href}
-                        className="block px-3 py-2.5 text-sm text-metal-700 hover:text-navy-900 hover:bg-metal-50 rounded-lg transition-colors"
-                        onClick={() => setMobileOpen(false)}
-                      >
-                        {child.label}
-                      </NavLink>
-                    ))}
-                  </div>
-                ) : (
-                  <NavLink
-                    key={link.href}
-                    to={link.href!}
-                    className={({ isActive }) =>
-                      cn(
-                        'block px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
-                        isActive ? 'text-navy-900 bg-navy-50' : 'text-metal-700 hover:text-navy-900 hover:bg-metal-50'
-                      )
-                    }
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {link.label}
-                  </NavLink>
-                )
-              )}
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.href}
+                  to={link.href}
+                  className={({ isActive }) =>
+                    cn(
+                      'block px-3 py-2.5 text-sm font-medium rounded-lg transition-colors',
+                      isActive ? 'text-navy-900 bg-navy-50' : 'text-metal-700 hover:text-navy-900 hover:bg-metal-50'
+                    )
+                  }
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </NavLink>
+              ))}
               <div className="pt-3 border-t border-metal-100 space-y-2">
                 {user ? (
                   <>

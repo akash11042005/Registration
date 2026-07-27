@@ -9,8 +9,9 @@ import {
   sendPasswordResetEmail,
   updateProfile,
 } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+import { auth, googleProvider, isFirebaseConfigured } from '@/lib/firebase';
 import { ADMIN_EMAILS } from '@/lib/constants';
+import { localSignIn, localSignUp } from '@/lib/localAuth';
 
 interface AppUser {
   uid: string;
@@ -53,8 +54,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = !!user && (ADMIN_EMAILS.includes(user.email ?? '') || user.role === 'admin');
 
-  // Firebase auth state observer
+  // Firebase auth state observer (only relevant when a real Firebase project is connected)
   useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setIsDemoMode(true);
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
         const u: AppUser = {
@@ -76,6 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signInWithGoogle = async () => {
+    if (!isFirebaseConfigured) {
+      setAuthError('Google sign-in requires a connected Firebase project. Please use email/password instead.');
+      throw new Error('Google sign-in unavailable in local mode');
+    }
     try {
       setAuthError(null);
       const res = await signInWithPopup(auth, googleProvider);
@@ -102,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithEmail = async (email: string, password: string) => {
     setAuthError(null);
-    // 1. Try Backend API Database Server
+    // 1. Try Backend API Database Server (if one is deployed alongside the app)
     try {
       const res = await fetch('/api/auth/signin', {
         method: 'POST',
@@ -115,37 +125,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(USER_KEY, JSON.stringify(data.user));
         setUser(data.user);
         return;
-      } else if (data.error) {
-        setAuthError(data.error);
-        throw new Error(data.error);
       }
-    } catch (apiErr) {
-      // 2. Try Firebase Auth
-      try {
-        const credential = await signInWithEmailAndPassword(auth, email, password);
-        const u: AppUser = {
-          uid: credential.user.uid,
-          email: credential.user.email || '',
-          displayName: credential.user.displayName || '',
-        };
-        setUser(u);
-        localStorage.setItem(USER_KEY, JSON.stringify(u));
-        return;
-      } catch (fbErr: unknown) {
-        const msg = fbErr instanceof Error ? fbErr.message : 'Sign-in failed';
-        if (msg.includes('user-not-found') || msg.includes('wrong-password') || msg.includes('invalid-credential')) {
-          setAuthError('Invalid email or password. Please try again.');
-        } else {
-          setAuthError(msg);
+    } catch {
+      // Backend not reachable (e.g. static hosting) — fall through to local auth
+    }
+
+    // 2. Local browser-based auth (always available, no setup required)
+    try {
+      const localUser = await localSignIn(email, password);
+      const u: AppUser = {
+        uid: localUser.uid,
+        email: localUser.email,
+        displayName: localUser.displayName,
+        role: localUser.role,
+      };
+      setUser(u);
+      localStorage.setItem(USER_KEY, JSON.stringify(u));
+      return;
+    } catch (localErr: unknown) {
+      // 3. Real Firebase Auth, only if a real project is connected
+      if (isFirebaseConfigured) {
+        try {
+          const credential = await signInWithEmailAndPassword(auth, email, password);
+          const u: AppUser = {
+            uid: credential.user.uid,
+            email: credential.user.email || '',
+            displayName: credential.user.displayName || '',
+          };
+          setUser(u);
+          localStorage.setItem(USER_KEY, JSON.stringify(u));
+          return;
+        } catch (fbErr: unknown) {
+          const msg = fbErr instanceof Error ? fbErr.message : 'Sign-in failed';
+          if (msg.includes('user-not-found') || msg.includes('wrong-password') || msg.includes('invalid-credential')) {
+            setAuthError('Invalid email or password. Please try again.');
+          } else {
+            setAuthError(msg);
+          }
+          throw fbErr;
         }
-        throw fbErr;
       }
+      const msg = localErr instanceof Error ? localErr.message : 'Sign-in failed';
+      setAuthError(msg);
+      throw localErr;
     }
   };
 
   const signUpWithEmail = async (email: string, password: string, displayName: string) => {
     setAuthError(null);
-    // 1. Try Backend API Database Server
+    // 1. Try Backend API Database Server (if one is deployed alongside the app)
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
@@ -158,40 +186,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(USER_KEY, JSON.stringify(data.user));
         setUser(data.user);
         return;
-      } else if (data.error) {
+      }
+      if (data.error && res.status === 400) {
+        // Real backend explicitly rejected (e.g. duplicate email) — surface that
         setAuthError(data.error);
         throw new Error(data.error);
       }
-    } catch (apiErr) {
-      // 2. Try Firebase Auth
-      try {
-        const credential = await createUserWithEmailAndPassword(auth, email, password);
-        if (displayName) {
-          await updateProfile(credential.user, { displayName });
-        }
-        const u: AppUser = {
-          uid: credential.user.uid,
-          email: credential.user.email || '',
-          displayName: displayName || credential.user.displayName || '',
-        };
-        setUser(u);
-        localStorage.setItem(USER_KEY, JSON.stringify(u));
-      } catch (fbErr: unknown) {
-        const msg = fbErr instanceof Error ? fbErr.message : 'Sign-up failed';
-        if (msg.includes('email-already-in-use')) {
-          setAuthError('An account with this email already exists. Please sign in instead.');
-        } else {
-          setAuthError(msg);
-        }
-        throw fbErr;
+    } catch (err) {
+      if (err instanceof Error && err.message.includes('already exists')) throw err;
+      // Backend not reachable — fall through to local auth
+    }
+
+    // 2. Local browser-based auth (always available, no setup required)
+    try {
+      const localUser = await localSignUp(email, password, displayName);
+      const u: AppUser = {
+        uid: localUser.uid,
+        email: localUser.email,
+        displayName: localUser.displayName,
+        role: localUser.role,
+      };
+      setUser(u);
+      localStorage.setItem(USER_KEY, JSON.stringify(u));
+      return;
+    } catch (localErr: unknown) {
+      const localMsg = localErr instanceof Error ? localErr.message : 'Sign-up failed';
+      // If it already exists locally, that's a real, final answer — don't try Firebase
+      if (localMsg.includes('already exists')) {
+        setAuthError(localMsg);
+        throw localErr;
       }
+      // 3. Real Firebase Auth, only if a real project is connected
+      if (isFirebaseConfigured) {
+        try {
+          const credential = await createUserWithEmailAndPassword(auth, email, password);
+          if (displayName) {
+            await updateProfile(credential.user, { displayName });
+          }
+          const u: AppUser = {
+            uid: credential.user.uid,
+            email: credential.user.email || '',
+            displayName: displayName || credential.user.displayName || '',
+          };
+          setUser(u);
+          localStorage.setItem(USER_KEY, JSON.stringify(u));
+          return;
+        } catch (fbErr: unknown) {
+          const msg = fbErr instanceof Error ? fbErr.message : 'Sign-up failed';
+          if (msg.includes('email-already-in-use')) {
+            setAuthError('An account with this email already exists. Please sign in instead.');
+          } else {
+            setAuthError(msg);
+          }
+          throw fbErr;
+        }
+      }
+      setAuthError(localMsg);
+      throw localErr;
     }
   };
 
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-    } catch {}
+    } catch { }
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
