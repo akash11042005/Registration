@@ -212,8 +212,8 @@ function MaterialsIllustration() {
 
           {/* Crystal atoms */}
           {[
-            [200,50],[280,120],[260,220],[200,240],[170,240],[110,170],[140,80],
-            [350,100],[380,200],[310,260],[50,200],[70,300],[170,320],[300,340],[220,360],[160,310]
+            [200, 50], [280, 120], [260, 220], [200, 240], [170, 240], [110, 170], [140, 80],
+            [350, 100], [380, 200], [310, 260], [50, 200], [70, 300], [170, 320], [300, 340], [220, 360], [160, 310]
           ].map(([x, y], i) => (
             <circle key={i} cx={x} cy={y} r="5" fill="#facc15" fillOpacity="0.8" />
           ))}
@@ -224,7 +224,7 @@ function MaterialsIllustration() {
           <circle cx="200" cy="200" r="10" fill="#facc15" fillOpacity="0.9" />
 
           {/* Lines to center */}
-          {[[200,50],[280,120],[260,220],[200,240],[110,170],[140,80]].map(([x,y],i) => (
+          {[[200, 50], [280, 120], [260, 220], [200, 240], [110, 170], [140, 80]].map(([x, y], i) => (
             <line key={i} x1="200" y1="200" x2={x} y2={y} stroke="#d4a017" strokeWidth="0.7" strokeOpacity="0.25" strokeDasharray="3 3" />
           ))}
 
@@ -298,8 +298,8 @@ export default function HomePage() {
                   Metallurgy & Materials Innovation Hackathon
                 </p>
                 <p className="text-base text-metal-400 leading-relaxed mb-8 max-w-lg">
-                  India's premier national-level metallurgy and materials engineering hackathon, hosted by the{' '}
-                  <span className="text-white font-medium">Department of Metallurgy & Materials Engineering</span>,{' '}
+                  India's premier national-level mechanical engineering hackathon, hosted by the{' '}
+                  <span className="text-white font-medium">Department of Mechanical Engineering</span>,{' '}
                   Walchand College of Engineering, Sangli.
                 </p>
 
