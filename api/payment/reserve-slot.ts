@@ -54,10 +54,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .get();
 
         if (!staleHolds.empty) {
-            const batch = db.batch();
-            staleHolds.docs.forEach((d) => batch.delete(d.ref));
-            batch.update(taskCountRef, { held: FieldValue.increment(-staleHolds.size) });
-            await batch.commit().catch(() => {
+            await db.runTransaction(async (tx) => {
+                const countSnap = await tx.get(taskCountRef);
+                const currentHeld = countSnap.exists ? (countSnap.data() as { held?: number }).held || 0 : 0;
+                // Clamp at 0 — never let stale-hold cleanup push the counter negative,
+                // e.g. from leftover holds that predate this cleanup logic existing.
+                const clampedHeld = Math.max(0, currentHeld - staleHolds.size);
+                staleHolds.docs.forEach((d) => tx.delete(d.ref));
+                tx.set(taskCountRef, { taskId, held: clampedHeld }, { merge: true });
+            }).catch(() => {
                 // Non-fatal — worst case an expired hold lingers an extra request cycle.
             });
         }
