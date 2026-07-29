@@ -77,7 +77,7 @@ service cloud.firestore {
         request.time < (timestamp.date(2026, 9, 14) + duration.value(210, 'm')) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'teamName', 'leaderPhone', 'collegeName',
-          'member1Name', 'member2Name', 'member3Name', 'member4Name',
+          'member1Name', 'member2Name',
           'mentorName', 'mentorEmail', 'mentorPhone'
         ]);
 

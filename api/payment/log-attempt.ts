@@ -1,25 +1,19 @@
 // ============================================================
-// POST /api/payment/reserve-slot
+// POST /api/payment/log-attempt
 //
-// Called the moment a user clicks "Pay" — BEFORE the Razorpay
-// checkout opens. Temporarily reserves one slot for 2 minutes so
-// two people can't both think a nearly-full task still has room
-// while they're mid-checkout. If they complete payment, this hold
-// is converted into the real registration (api/payment/verify.ts).
-// If they cancel or abandon the page, it's released — either
-// immediately (release-hold.ts) or automatically once expired.
+// Logs a payment attempt that did NOT succeed — either the user
+// cancelled the Razorpay popup, or a payment method was declined.
+// Called from src/lib/razorpay.ts's failure/dismiss paths.
 //
-// IMPORTANT — this is a UX courtesy, not the security boundary.
-// The hard, race-condition-safe capacity check remains the
-// Firestore transaction inside api/payment/verify.ts, which never
-// trusts anything about holds being honestly reported.
+// This exists purely for admin visibility ("why did this person
+// never complete registration?") — it never touches slot counts,
+// registrations, or anything security-relevant. A logging failure
+// here should never block or confuse the user's actual checkout flow.
 // ============================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAdminDb } from '../_lib/firebaseadmin.js';
+import { verifyCallerUid } from '../_lib/verifyAuth.js';
 import { FieldValue } from 'firebase-admin/firestore';
-
-const MAX_TEAMS_PER_TASK = 8;
-const HOLD_DURATION_MS = 2 * 60 * 1000; // 2 minutes
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -27,69 +21,65 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { taskId, uid } = (req.body || {}) as { taskId?: number; uid?: string };
-    if (typeof taskId !== 'number' || !uid) {
-        return res.status(400).json({ error: 'Missing taskId or uid' });
+    const {
+        status, // 'failed' | 'cancelled'
+        orderId,
+        paymentId, // present for genuine failures (card declined etc.), absent for a plain cancel
+        uid,
+        taskId,
+        errorCode,
+        errorDescription,
+        errorReason,
+    } = (req.body || {}) as {
+        status?: 'failed' | 'cancelled';
+        orderId?: string;
+        paymentId?: string;
+        uid?: string;
+        taskId?: number;
+        errorCode?: string;
+        errorDescription?: string;
+        errorReason?: string;
+    };
+
+    if (status !== 'failed' && status !== 'cancelled') {
+        return res.status(400).json({ error: 'Invalid status' });
     }
 
-    let db: ReturnType<typeof getAdminDb>;
-    try {
-        db = getAdminDb();
-    } catch (err) {
-        console.error('Firebase Admin initialization error:', err);
-        return res.status(500).json({ error: 'Server is not configured correctly. Please contact the organizers.' });
+    // This endpoint is purely for admin visibility and must never block the
+    // user's flow — so an unverifiable uid isn't rejected outright, it's just
+    // dropped from the logged record rather than trusted as-is.
+    let verifiedUid: string | null = null;
+    if (uid) {
+        const authResult = await verifyCallerUid(req, uid);
+        verifiedUid = authResult.ok ? authResult.uid : null;
     }
-    const taskCountRef = db.collection('taskCounts').doc(String(taskId));
-    const holdsRef = db.collection('slotHolds');
 
     try {
-        // ── Step 1: lazily expire this task's stale holds (best-effort, not transactional) ──
-        // Firestore's own TTL deletion can take up to 24h, so we can't rely on documents
-        // actually being gone — instead we look them up and clean up opportunistically
-        // whenever anyone tries to reserve or check this task.
-        const now = Date.now();
-        const staleHolds = await holdsRef
-            .where('taskId', '==', taskId)
-            .where('expiresAt', '<=', now)
-            .get();
+        const db = getAdminDb();
+        // Use the real Razorpay payment ID as the doc ID when we have one (failed
+        // attempts still get one) so it lines up with a later successful retry's
+        // audit trail; otherwise let Firestore generate one for a plain cancel.
+        const ref = paymentId ? db.collection('payments').doc(paymentId) : db.collection('payments').doc();
 
-        if (!staleHolds.empty) {
-            const batch = db.batch();
-            staleHolds.docs.forEach((d) => batch.delete(d.ref));
-            batch.update(taskCountRef, { held: FieldValue.increment(-staleHolds.size) });
-            await batch.commit().catch(() => {
-                // Non-fatal — worst case an expired hold lingers an extra request cycle.
-            });
-        }
+        await ref.set({
+            paymentId: paymentId || null,
+            razorpayOrderId: orderId || null,
+            uid: verifiedUid,
+            taskId: typeof taskId === 'number' ? taskId : null,
+            status,
+            gatewayResponse: {
+                errorCode: errorCode || null,
+                errorDescription: errorDescription || null,
+                errorReason: errorReason || null,
+            },
+            createdAt: new Date().toISOString(),
+            createdAtServer: FieldValue.serverTimestamp(),
+        }, { merge: true });
 
-        // ── Step 2: atomic reserve ──
-        const result = await db.runTransaction(async (tx) => {
-            const countSnap = await tx.get(taskCountRef);
-            const data = countSnap.exists ? countSnap.data() as { count?: number; held?: number } : {};
-            const confirmed = data.count || 0;
-            const held = Math.max(0, data.held || 0);
-
-            if (confirmed + held >= MAX_TEAMS_PER_TASK) {
-                return { full: true };
-            }
-
-            const holdRef = holdsRef.doc();
-            const expiresAt = Date.now() + HOLD_DURATION_MS;
-            tx.set(holdRef, { taskId, uid, createdAt: FieldValue.serverTimestamp(), expiresAt });
-            tx.set(taskCountRef, { taskId, held: FieldValue.increment(1) }, { merge: true });
-
-            return { full: false, holdId: holdRef.id, expiresAt };
-        });
-
-        if (result.full) {
-            return res.status(409).json({
-                error: 'This problem statement just reached its team cap. Please choose another before paying.',
-            });
-        }
-
-        return res.status(200).json({ holdId: result.holdId, expiresAt: result.expiresAt, holdSeconds: HOLD_DURATION_MS / 1000 });
+        return res.status(200).json({ logged: true });
     } catch (err) {
-        console.error('reserve-slot error:', err);
-        return res.status(500).json({ error: 'Could not reserve a slot. Please try again.' });
+        console.error('log-attempt error (non-fatal):', err);
+        // Never fail the user's flow over a logging error.
+        return res.status(200).json({ logged: false });
     }
 }

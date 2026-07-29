@@ -15,6 +15,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import { getAdminDb } from '../_lib/firebaseadmin.js';
+import { verifyCallerUid } from '../_lib/verifyAuth.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const MAX_TEAMS_PER_TASK = 8;
@@ -83,6 +84,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     if (!isValidRegistration(registration)) {
         return res.status(400).json({ error: 'Missing or invalid team registration details' });
+    }
+
+    const authResult = await verifyCallerUid(req, registration.uid);
+    if (!authResult.ok) {
+        return res.status(authResult.status).json({ error: authResult.error });
     }
 
     // ── Step 1: verify the HMAC signature Razorpay attaches to the checkout callback ──

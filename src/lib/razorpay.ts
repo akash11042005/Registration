@@ -5,6 +5,7 @@
 // verification happen server-side (api/payment/*) — this file
 // never touches the Razorpay secret key.
 // ============================================================
+import { authFetch } from '@/lib/authFetch';
 
 export interface RazorpayCreateOrderResponse {
     orderId: string;
@@ -84,7 +85,7 @@ function logFailedAttempt(params: {
     errorDescription?: string;
     errorReason?: string;
 }) {
-    fetch('/api/payment/log-attempt', {
+    authFetch('/api/payment/log-attempt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),

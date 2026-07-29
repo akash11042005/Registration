@@ -16,6 +16,7 @@
 // ============================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { getAdminDb } from '../_lib/firebaseadmin.js';
+import { verifyCallerUid } from '../_lib/verifyAuth.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const MAX_TEAMS_PER_TASK = 8;
@@ -30,6 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { taskId, uid } = (req.body || {}) as { taskId?: number; uid?: string };
     if (typeof taskId !== 'number' || !uid) {
         return res.status(400).json({ error: 'Missing taskId or uid' });
+    }
+
+    const authResult = await verifyCallerUid(req, uid);
+    if (!authResult.ok) {
+        return res.status(authResult.status).json({ error: authResult.error });
     }
 
     let db: ReturnType<typeof getAdminDb>;
@@ -67,7 +73,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // ── Step 2: atomic reserve ──
+        // ── Step 2: reuse an existing active hold for this uid+task if one exists ──
+        // Prevents a double-click, a retry, or a scripted flood from the same
+        // user stacking up multiple holds and eating into the real 8-slot cap.
+        // This is a plain query (not part of the transaction below — Firestore
+        // transactions can't run arbitrary queries) so there's a narrow race if
+        // the exact same uid fires two requests in the same instant; harmless
+        // here since it's a UX courtesy layer, not the security boundary.
+        const now2 = Date.now();
+        const existingHold = await holdsRef
+            .where('taskId', '==', taskId)
+            .where('uid', '==', uid)
+            .where('expiresAt', '>', now2)
+            .limit(1)
+            .get();
+
+        if (!existingHold.empty) {
+            const doc = existingHold.docs[0];
+            const expiresAt = now2 + HOLD_DURATION_MS;
+            await doc.ref.update({ expiresAt }); // renew instead of stacking a second hold
+            return res.status(200).json({ holdId: doc.id, expiresAt, holdSeconds: HOLD_DURATION_MS / 1000 });
+        }
+
+        // ── Step 3: atomic reserve ──
         const result = await db.runTransaction(async (tx) => {
             const countSnap = await tx.get(taskCountRef);
             const data = countSnap.exists ? countSnap.data() as { count?: number; held?: number } : {};

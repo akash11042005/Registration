@@ -23,6 +23,7 @@ import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
 import { payWithRazorpay } from '@/lib/razorpay';
+import { authFetch } from '@/lib/authFetch';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import {
   BASE_REGISTRATION_FEE,
@@ -216,7 +217,7 @@ export default function RegistrationPage() {
 
   const releaseHold = async (holdId: string) => {
     try {
-      await fetch('/api/payment/release-hold', {
+      await authFetch('/api/payment/release-hold', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ holdId }),
@@ -254,7 +255,7 @@ export default function RegistrationPage() {
       // courtesy hold for UX only — api/payment/verify.ts still does its
       // own authoritative, transactional capacity check regardless of
       // what happens here.
-      const reserveRes = await fetch('/api/payment/reserve-slot', {
+      const reserveRes = await authFetch('/api/payment/reserve-slot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId: step1.taskId, uid: user.uid }),
@@ -279,7 +280,7 @@ export default function RegistrationPage() {
         uid: user.uid,
       });
 
-      const verifyRes = await fetch('/api/payment/verify', {
+      const verifyRes = await authFetch('/api/payment/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
