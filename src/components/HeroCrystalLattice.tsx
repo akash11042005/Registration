@@ -39,8 +39,18 @@ const PALETTE = [
 ].map((c) => new THREE.Color(c));
 
 const CELL = 2.2; // BCC unit-cell edge length
-const PARTICLES_PER_ATOM = 480;
 const ATOM_RADIUS = 0.34;
+
+// Perf/UX guard: phones and tablets get fewer particles, a lower device-pixel-
+// ratio cap, and no OrbitControls (which otherwise captures one-finger touch-
+// drag and hijacks page scrolling instead of letting the page scroll normally).
+// prefers-reduced-motion also disables the continuous rotation for anyone who
+// has that accessibility setting on. Computed once at module load — this is a
+// hero background, not something that needs to react to live resizing.
+const IS_COARSE_POINTER = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+const PREFERS_REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const PARTICLES_PER_ATOM = IS_COARSE_POINTER ? 220 : 480;
+const MAX_DPR = IS_COARSE_POINTER ? 1 : 2;
 
 interface Atom {
     position: THREE.Vector3;
@@ -313,7 +323,7 @@ function Lattice({ hoveringRef }: { hoveringRef: React.MutableRefObject<boolean>
     }, []);
 
     useFrame((state, delta) => {
-        if (spinRef.current) {
+        if (spinRef.current && !PREFERS_REDUCED_MOTION) {
             spinRef.current.rotation.y += delta * 0.1;
             spinRef.current.rotation.y += scrollFactor.current * delta * 0.06;
             const breathe = 1 + Math.sin(state.clock.elapsedTime * 0.5) * 0.015;
@@ -355,25 +365,37 @@ export default function HeroCrystalLattice() {
         >
             <Canvas
                 camera={{ position: [0, 0, 9], fov: 38 }}
-                dpr={[1, 2]}
-                gl={{ antialias: true, alpha: true }}
+                dpr={[1, MAX_DPR]}
+                gl={{ antialias: !IS_COARSE_POINTER, alpha: true, powerPreference: 'high-performance' }}
             >
                 <Stars radius={40} depth={25} count={350} factor={1} saturation={0} fade speed={0.2} />
                 <ambientLight intensity={0.35} />
                 <directionalLight position={[4, 5, 6]} intensity={0.7} color="#eef2ff" />
                 <directionalLight position={[-5, -3, -4]} intensity={0.25} color="#aab8d6" />
                 <Lattice hoveringRef={hoveringRef} />
-                <OrbitControls
-                    enablePan={false}
-                    enableZoom={true}
-                    minDistance={6}
-                    maxDistance={13}
-                    enableDamping
-                    dampingFactor={0.08}
-                    rotateSpeed={0.5}
-                />
+                {/* Skipped entirely on touch devices — OrbitControls captures
+                    one-finger drag for rotate, which otherwise hijacks the
+                    page's normal scroll gesture the moment a finger lands on
+                    the hero canvas. Desktop mouse-drag interaction is unaffected. */}
+                {!IS_COARSE_POINTER && (
+                    <OrbitControls
+                        enablePan={false}
+                        enableZoom={true}
+                        minDistance={6}
+                        maxDistance={13}
+                        enableDamping
+                        dampingFactor={0.08}
+                        rotateSpeed={0.5}
+                    />
+                )}
                 <EffectComposer>
-                    <Bloom intensity={0.32} luminanceThreshold={0.5} luminanceSmoothing={0.4} mipmapBlur radius={0.4} />
+                    <Bloom
+                        intensity={IS_COARSE_POINTER ? 0.2 : 0.32}
+                        luminanceThreshold={0.5}
+                        luminanceSmoothing={0.4}
+                        mipmapBlur={!IS_COARSE_POINTER}
+                        radius={0.4}
+                    />
                     <Vignette darkness={0.6} offset={0.3} />
                 </EffectComposer>
             </Canvas>
