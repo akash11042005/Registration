@@ -6,9 +6,9 @@ import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import AnnouncementTicker from '@/components/AnnouncementTicker';
 import BackToTop from '@/components/BackToTop';
 import FloatingRegisterCTA from '@/components/FloatingRegisterCTA';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Route Lazy Loading
 const HomePage = lazy(() => import('@/pages/HomePage'));
@@ -17,6 +17,7 @@ const ProblemStatementsPage = lazy(() => import('@/pages/ProblemStatementsPage')
 const TimelinePage = lazy(() => import('@/pages/TimelinePage'));
 const RulesPage = lazy(() => import('@/pages/RulesPage'));
 const EligibilityPage = lazy(() => import('@/pages/EligibilityPage'));
+const GalleryPage = lazy(() => import('@/pages/GalleryPage'));
 const RegistrationPage = lazy(() => import('@/pages/RegistrationPage'));
 const FAQsPage = lazy(() => import('@/pages/FAQsPage'));
 const ContactPage = lazy(() => import('@/pages/ContactPage'));
@@ -60,6 +61,7 @@ function AnimatedRoutes() {
           <Route path="/timeline" element={<TimelinePage />} />
           <Route path="/rules" element={<RulesPage />} />
           <Route path="/eligibility" element={<EligibilityPage />} />
+          <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/register" element={<RegistrationPage />} />
           <Route path="/faqs" element={<FAQsPage />} />
           <Route path="/contact" element={<ContactPage />} />
@@ -81,10 +83,11 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <div className="flex flex-col min-h-screen font-sans bg-white text-metal-900">
-            <AnnouncementTicker />
             <Navbar />
             <main className="flex-1">
-              <AnimatedRoutes />
+              <ErrorBoundary>
+                <AnimatedRoutes />
+              </ErrorBoundary>
             </main>
             <Footer />
             <BackToTop />

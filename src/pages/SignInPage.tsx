@@ -7,10 +7,14 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, LogIn, Globe } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
+import { ADMIN_LOGIN_USERNAME, ADMIN_LOGIN_EMAIL, ADMIN_EMAILS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email address'),
+  email: z.string().min(1, 'Enter your email or username').refine(
+    (val) => val.trim().toLowerCase() === ADMIN_LOGIN_USERNAME || z.string().email().safeParse(val.trim()).success,
+    { message: 'Enter a valid email address' }
+  ),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -24,39 +28,38 @@ export default function SignInPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [showReset, setShowReset] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
+  const from = (location.state as { from?: { pathname: string; search?: string } })?.from;
+  const fromPath = from ? `${from.pathname}${from.search || ''}` : '/';
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
+  const destinationFor = (email: string) =>
+    ADMIN_EMAILS.includes(email.trim().toLowerCase()) ? '/admin' : fromPath;
+
   const onSubmit = async (data: FormData) => {
     try {
       clearAuthError();
-      await signInWithEmail(data.email, data.password);
-      navigate(from, { replace: true });
-    } catch {}
+      const identifier = data.email.trim().toLowerCase() === ADMIN_LOGIN_USERNAME
+        ? ADMIN_LOGIN_EMAIL
+        : data.email.trim();
+      const signedInUser = await signInWithEmail(identifier, data.password);
+      navigate(destinationFor(signedInUser.email), { replace: true });
+    } catch { }
   };
 
   const handleGoogle = async () => {
     try {
       setGoogleLoading(true);
       clearAuthError();
-      await signInWithGoogle();
-      navigate(from, { replace: true });
+      const signedInUser = await signInWithGoogle();
+      navigate(destinationFor(signedInUser.email), { replace: true });
     } catch {
     } finally {
       setGoogleLoading(false);
     }
-  };
-
-  const handleReset = async () => {
-    if (!resetEmail) return;
-    const { resetPassword } = useAuth();
-    // Handled separately — just show sent state
-    setResetSent(true);
   };
 
   return (
@@ -102,16 +105,16 @@ export default function SignInPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="form-label" htmlFor="email">Email</label>
+                <label className="form-label" htmlFor="email">Email or Admin Username</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-metal-400" />
                   <input
                     {...register('email')}
                     id="email"
-                    type="email"
-                    autoComplete="email"
+                    type="text"
+                    autoComplete="username"
                     className={cn('form-input pl-10', errors.email && 'border-red-400')}
-                    placeholder="you@college.edu"
+                    placeholder="you@college.edu or admin"
                   />
                 </div>
                 {errors.email && <p className="form-error"><AlertCircle className="w-3 h-3" />{errors.email.message}</p>}
@@ -162,7 +165,7 @@ export default function SignInPage() {
 
             <p className="text-center text-xs text-metal-500">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-navy-700 font-semibold hover:text-navy-900">
+              <Link to="/signup" state={from ? { from } : undefined} className="text-navy-700 font-semibold hover:text-navy-900">
                 Create account
               </Link>
             </p>

@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, ChevronRight, FlaskConical, Users, AlertCircle, Info, ArrowRight } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
-import { PROBLEM_STATEMENTS, CATEGORIES, ProblemStatement } from '@/lib/problemStatements';
+import { PROBLEM_STATEMENTS, ProblemStatement } from '@/lib/problemStatements';
 import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
 import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -43,18 +43,6 @@ function ProblemDetailModal({
         <div className="sticky top-0 bg-white border-b border-metal-100 px-6 pt-6 pb-4 z-10">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-semibold text-metal-500 bg-metal-100 px-2.5 py-1 rounded-full">
-                  {ps.category}
-                </span>
-                <span className={cn('badge',
-                  ps.difficulty === 'Medium' && 'badge-medium',
-                  ps.difficulty === 'Hard' && 'badge-hard',
-                  ps.difficulty === 'Advanced' && 'badge-advanced'
-                )}>
-                  {ps.difficulty}
-                </span>
-              </div>
               <h2 className="text-lg font-bold text-navy-900">{ps.title}</h2>
             </div>
             <button
@@ -75,8 +63,8 @@ function ProblemDetailModal({
             isFull
               ? 'bg-red-50 border-red-200 text-red-700'
               : spotsLeft <= 2
-              ? 'bg-orange-50 border-orange-200 text-orange-700'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                ? 'bg-orange-50 border-orange-200 text-orange-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
           )}>
             <Users className="w-4 h-4 shrink-0" />
             <span className="text-sm font-semibold">
@@ -175,19 +163,7 @@ function ProblemCard({
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-metal-500 bg-metal-100 px-2.5 py-1 rounded-full">
-            {ps.category}
-          </span>
-          <span className={cn('badge',
-            ps.difficulty === 'Medium' && 'badge-medium',
-            ps.difficulty === 'Hard' && 'badge-hard',
-            ps.difficulty === 'Advanced' && 'badge-advanced'
-          )}>
-            {ps.difficulty}
-          </span>
-        </div>
-        <span className="text-xs font-bold text-metal-400 shrink-0">#{ps.id}</span>
+        <span className="text-xs font-bold text-metal-400">#{ps.id}</span>
       </div>
 
       <h3 className="font-bold text-navy-900 mb-2 leading-tight group-hover:text-navy-700 transition-colors">
@@ -242,24 +218,20 @@ function ProblemCard({
 // Page
 // ─────────────────────────────────────────────────
 export default function ProblemStatementsPage() {
-  const [searchParams] = useSearchParams();
-  const initialCat = searchParams.get('cat') || 'All';
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState(initialCat);
   const [selectedPs, setSelectedPs] = useState<ProblemStatement | null>(null);
   const counts = useTaskRegistrationCounts();
 
   const filtered = useMemo(() => {
     return PROBLEM_STATEMENTS.filter((ps) => {
-      const matchCat = category === 'All' || ps.category === category;
       const q = search.toLowerCase();
       const matchSearch = !q ||
         ps.title.toLowerCase().includes(q) ||
         ps.objective.toLowerCase().includes(q) ||
         ps.tags.some((t) => t.toLowerCase().includes(q));
-      return matchCat && matchSearch;
+      return matchSearch;
     });
-  }, [search, category]);
+  }, [search]);
 
   return (
     <PageTransition>
@@ -282,18 +254,18 @@ export default function ProblemStatementsPage() {
           <span className="section-label text-gold-400">AAYODHYAM 2026</span>
           <h1 className="text-headline text-white mb-3">Problem Statements</h1>
           <p className="text-metal-300 text-body-lg max-w-2xl">
-            Browse all 11 research challenges across five domains of metallurgy and materials engineering. Select a task to view full details, required equipment, and evaluation criteria.
+            Browse all {PROBLEM_STATEMENTS.length} research challenges in metallurgy and materials engineering. Select a task to view full details, required equipment, and evaluation criteria.
           </p>
 
           {/* Info cards */}
           <div className="flex flex-wrap gap-3 mt-6">
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg border border-white/20">
               <Info className="w-3.5 h-3.5 text-gold-400" />
-              <span className="text-xs text-metal-300 font-medium">11 total tasks</span>
+              <span className="text-xs text-metal-300 font-medium">{PROBLEM_STATEMENTS.length} total tasks</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg border border-white/20">
               <Users className="w-3.5 h-3.5 text-gold-400" />
-              <span className="text-xs text-metal-300 font-medium">Max 5 teams per task</span>
+              <span className="text-xs text-metal-300 font-medium">Max 8 teams per task</span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-lg border border-white/20">
               <FlaskConical className="w-3.5 h-3.5 text-gold-400" />
@@ -329,32 +301,14 @@ export default function ProblemStatementsPage() {
               )}
             </div>
           </div>
-
-          {/* Category filter chips */}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => setCategory(cat.value)}
-                className={cn(
-                  'px-3 py-1.5 rounded-full text-xs font-semibold transition-all',
-                  category === cat.value
-                    ? 'bg-navy-900 text-white shadow-navy'
-                    : 'bg-metal-100 text-metal-600 hover:bg-metal-200'
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {/* Results count */}
         <p className="text-sm text-metal-500 mb-5 font-medium">
           {filtered.length} task{filtered.length !== 1 ? 's' : ''} found
-          {(search || category !== 'All') && (
+          {search && (
             <button
-              onClick={() => { setSearch(''); setCategory('All'); }}
+              onClick={() => setSearch('')}
               className="ml-3 text-navy-700 hover:text-navy-900 underline underline-offset-2"
             >
               Reset filters
@@ -390,7 +344,7 @@ export default function ProblemStatementsPage() {
               <h3 className="font-bold text-navy-900 mb-2">No tasks match your filters</h3>
               <p className="text-sm text-metal-500 mb-6">Try adjusting your search or category filter</p>
               <button
-                onClick={() => { setSearch(''); setCategory('All'); }}
+                onClick={() => setSearch('')}
                 className="btn-primary"
               >
                 Reset Filters

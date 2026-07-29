@@ -1,0 +1,136 @@
+rules_version = '2';
+
+// ============================================================
+// AAYODHYAM 2026 — Firestore Security Rules
+//
+// Paste this into Firebase Console → Firestore Database → Rules,
+// or deploy via `firebase deploy --only firestore:rules` if you
+// use the Firebase CLI.
+//
+// Key design decision: registration documents are only ever
+// created by api/payment/verify.ts using the Firebase Admin SDK
+// (which bypasses these rules entirely), after a verified Razorpay
+// payment. Clients can never create or freely edit a registration —
+// only read their own, and admins may update paymentStatus.
+// ============================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Keep this list in sync with ADMIN_EMAILS in src/lib/constants.ts
+    function isAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email in [
+          'metallurgy@walchandsangli.ac.in',
+          'admin@aayodhyam2026.in'
+        ];
+    }
+
+    // User profile — created client-side at sign-up/sign-in (see
+    // src/lib/ensureUserDoc.ts), then enriched server-side (phone,
+    // collegeName, registrationStatus, teamId) once they register a team
+    // (see api/payment/verify.ts). The `role` field here is informational/
+    // denormalized only — actual admin authorization always re-checks
+    // request.auth.token.email against isAdmin() below, never this field,
+    // so a user lying about their own role here grants them nothing extra.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == userId && request.resource.data.uid == userId;
+      // Only the Admin SDK (bypasses rules) or an admin dashboard action
+      // may update a profile after creation — e.g. registrationStatus/teamId.
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Dedicated payment records — separate from the registration itself so
+    // payment history survives independently of what happens to a
+    // registration later (e.g. admin rejection). Written only by the
+    // Admin SDK inside api/payment/verify.ts's transaction.
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if false;
+    }
+
+    match /registrations/{regId} {
+      // A participant can read only their own registration; admins can read all.
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+
+      // Creation happens exclusively server-side via the Admin SDK
+      // (api/payment/verify.ts), after the Razorpay signature is verified.
+      allow create: if false;
+
+      // Admins may update payment status only — nothing else about a
+      // registration (team details, task, etc.) can be edited via rules.
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['paymentStatus']);
+
+      // The team's own leader/members may edit their own team details — but
+      // only the fields listed below, only before the edit deadline, and never
+      // their payment/task/identity fields. 2026-09-14T09:00:00+05:30 in UTC
+      // is 2026-09-14T03:30:00Z (midnight UTC + 210 minutes) — keep this in
+      // sync with REGISTRATION_EDIT_DEADLINE in src/lib/constants.ts.
+      allow update: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        request.time < (timestamp.date(2026, 9, 14) + duration.value(210, 'm')) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'teamName', 'leaderPhone', 'collegeName',
+          'member1Name', 'member2Name', 'member3Name', 'member4Name',
+          'mentorName', 'mentorEmail', 'mentorPhone'
+        ]);
+
+      allow delete: if isAdmin();
+    }
+
+    // Public, read-only slot-count aggregate — lets the Problem Statements
+    // page show live availability without exposing any team's details.
+    // The Admin SDK writes this on verified payment; the dashboard's own
+    // reject/un-reject/delete actions also adjust it (hence isAdmin(), not false).
+    // `held` (active 2-minute checkout reservations) is folded into the same
+    // doc by api/payment/reserve-slot.ts / release-hold.ts / verify.ts.
+    match /taskCounts/{taskId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Temporary checkout reservations (see api/payment/reserve-slot.ts).
+    // Never read or written directly by any client — only the Admin SDK
+    // touches this collection. Holding a uid here is why it isn't public.
+    match /slotHolds/{holdId} {
+      allow read, write: if false;
+    }
+
+    // Server-side-only log of payments that succeeded after a task filled up
+    // (see api/payment/verify.ts) — for admin follow-up (refund/reassignment).
+    // Admin may mark an issue resolved (delete) once handled manually.
+    match /payment_issues/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
+      allow delete: if isAdmin();
+    }
+
+    // Announcements: public read, admin write (still served via the local
+    // Express/localStorage fallback as of Phase 4 — included here for when
+    // that gets migrated to Firestore too).
+    match /announcements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Submissions: owner or admin read; owner may create their own; only
+    // admin may update (grading). Also still on the local fallback path.
+    match /submissions/{id} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

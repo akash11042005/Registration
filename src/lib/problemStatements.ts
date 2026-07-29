@@ -35,7 +35,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Muffle furnace', 'Metallographic polishing wheel', 'Optical microscope with calibrated eyepiece', 'Nital etchant (2%)', 'Mounting press', 'SiC abrasive papers'],
     evaluationCriteria: 'Accuracy and precision of decarburization depth measurement; quality of metallographic preparation (surface finish, etch contrast); methodology documentation; correlation of microstructural observation with heating parameters; statistical repeatability across multiple sections.',
     tags: ['Decarburization', 'Carbon Steel', 'Optical Microscopy', 'Ferrite', 'Nital Etching', 'ASTM E1077'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 2,
@@ -47,7 +47,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Picral / saturated picric acid etchant with wetting agent', 'Optical microscope with eyepiece graticule', 'Metallographic preparation station', 'Hardness tester (HRC)'],
     evaluationCriteria: 'Quality of prior austenite grain boundary decoration; correct application of ASTM E112 intercept or comparison method; reproducibility across multiple fields of view; identification of etching artefacts; correlation of measured ASTM grain size number with reported heat treatment conditions.',
     tags: ['Prior Austenite', 'Grain Size', 'ASTM E112', 'Picral Etching', 'Hardened Steel', 'PAGBs'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 3,
@@ -59,7 +59,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Computer lab with Python 3.x environment', 'Sample micrograph dataset (provided by WCE)', 'OpenCV / scikit-image libraries', 'Display for live demo'],
     evaluationCriteria: 'Accuracy of automated grain size measurement vs. manual ground truth (% error); code quality, modularity, and documentation; robustness to image variability; computational efficiency; live demonstration on unseen micrograph; innovation in pipeline design (e.g., deep-learning segmentation, adaptive thresholding).',
     tags: ['Python', 'OpenCV', 'Computer Vision', 'Image Analysis', 'Grain Size', 'scikit-image', 'ASTM E112', 'AI'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 4,
@@ -71,7 +71,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Universal Testing Machine (UTM)', 'Ageing oil bath or controlled oven (100–200°C)', 'Tensile specimens (low-carbon steel, pre-machined)', 'Data acquisition software', 'Vernier calipers'],
     evaluationCriteria: 'Clear demonstration of yield-point return (quantified ΔYS in MPa); quality and annotation of engineering stress–strain curves; accuracy of pre-strain calculation; thermal ageing parameter control; mechanistic explanation of Cottrell atmosphere in the written report; repeatability with duplicate specimens.',
     tags: ['Strain Ageing', 'Cottrell Atmosphere', 'Yield Point Return', 'Low-Carbon Steel', 'UTM', 'Dislocations'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 5,
@@ -83,7 +83,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['High-temperature UTM or elevated-temperature impact tester', 'Heating chamber with thermocouple control', 'Medium-carbon steel specimens', 'Thermocouples + temperature logger', 'Photography for oxide film documentation'],
     evaluationCriteria: 'Observation and quantification of the UTS maximum and ductility minimum in the 200–300°C range; documentation of blue oxide film; identification of PLC serrations on stress–strain curve; quality of data across temperature range; mechanistic explanation linking DSA to interstitial–dislocation interaction; completeness of report.',
     tags: ['Blue Brittleness', 'DSA', 'PLC Effect', 'Medium-Carbon Steel', 'High-Temp Testing', 'Ductility', 'Oxide Film'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 6,
@@ -95,7 +95,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Thermomechanical press or lab rolling mill (or controlled forging anvil)', 'Heat treatment furnaces', 'Metallography preparation bench', 'Optical microscope', 'Hardness tester (HV/HRB)'],
     evaluationCriteria: 'Degree of grain refinement achieved (ΔASTM grain size number); quality of metallographic evidence; correlation of hardness improvement with Hall–Petch relationship (ΔHV vs. d⁻¹/²); documentation of processing route; repeatability; explanation of recrystallization and grain growth suppression mechanisms.',
     tags: ['Grain Refinement', 'Hall–Petch', 'Thermomechanical Processing', 'Recrystallization', 'ASTM E112', 'Carbon Steel'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 7,
@@ -107,7 +107,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Heat treatment furnaces (up to 1100°C)', 'Quenching tanks (water, oil, polymer quench)', 'Rockwell hardness tester (HRC)', 'UTM with extensometer', 'Thermocouple + data logger', 'Metallography bench'],
     evaluationCriteria: 'Proximity of achieved mechanical properties to target spec (primary); correctness of processing logic and design rationale; microstructural characterization of final condition (martensite, bainite, etc.); quality of hardness profile; evidence of systematic experimental approach; completeness of report including TTT/CCT reference.',
     tags: ['Quenching', 'Tempering', 'Normalizing', 'Mechanical Properties', 'UTS', 'Hardness', 'Heat Treatment Design', 'TTT'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 8,
@@ -119,7 +119,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Jominy end-quench setup with water jet fixture', 'High-temperature furnace with controlled atmosphere', 'Surface grinder or flat-file preparation', 'Rockwell C hardness tester', 'Vernier calipers for measurement positioning'],
     evaluationCriteria: 'Correctness of Jominy test procedure per ASTM A255; accuracy and repeatability of hardness readings; quality of Jominy curve (smoothness, correct shape); comparison with published hardenability band; identification of martensite start/finish and critical hardness position; completeness of metallurgical interpretation.',
     tags: ['Jominy Test', 'Hardenability', 'ASTM A255', 'Hardness Profile', 'Martensite', 'CCT', 'End Quench'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 9,
@@ -131,7 +131,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Optical microscope with point counter (eyepiece grid or digital overlay)', 'Sub-zero treatment bath (dry ice + acetone, or liquid nitrogen dewar)', 'Metallography preparation station', 'Rockwell / Vickers hardness tester', 'High-carbon tool steel specimens'],
     evaluationCriteria: 'Statistical rigor of point-count measurement (minimum field count per ASTM E562); correct sample preparation and etching for austenite/martensite contrast; quantification of retained austenite reduction after sub-zero treatment; correlation with hardness changes; uncertainty analysis; quality of microstructural photography and annotation.',
     tags: ['Retained Austenite', 'Martensite', 'Point Counting', 'ASTM E562', 'Cryogenic Treatment', 'High-Carbon Steel', 'Stereology'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 10,
@@ -143,7 +143,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['High-temperature furnace capable of >1100°C', 'Charpy impact tester', 'Metallography preparation bench', 'Optical microscope', 'Hardness tester (HV/HRB)', 'Charpy specimens (pre-notched)'],
     evaluationCriteria: 'Quantification of grain coarsening (ASTM grain size before vs. after, ΔASTM number); documentation of Widmanstätten or coarse structure; measured reduction in Charpy impact energy; correlation of grain size with toughness loss; quality of metallographic images; mechanistic explanation of overheating embrittlement; practical implications discussed.',
     tags: ['Grain Coarsening', 'Overheating', 'Charpy Impact', 'Toughness', 'Widmanstätten', 'Embrittlement', 'Phase Transformations'],
-    cap: 5,
+    cap: 8,
   },
   {
     id: 11,
@@ -155,7 +155,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     labEquipment: ['Ferrite meter (Feritscope / Fischer FE 8e or equivalent)', 'Electro-etching unit with oxalic acid (10%)', 'Optical metallographic microscope', 'Metallography preparation station', 'SS weld coupon / heat-treated specimens'],
     evaluationCriteria: 'Agreement between ferrite meter and point-count / image analysis methods; correctness of electrolytic etching procedure; quality of contrast between delta-ferrite and austenite matrix; statistical adequacy of point-count measurement; interpretation of ferrite morphology and its origin (solidification mode, heat treatment); completeness of comparative analysis.',
     tags: ['Delta Ferrite', 'Stainless Steel', 'Ferrite Meter', 'Feritscope', 'Electrolytic Etching', 'Weldment', 'Volume Fraction'],
-    cap: 5,
+    cap: 8,
   },
 ];
 

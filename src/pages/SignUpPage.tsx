@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,8 +24,12 @@ type FormData = z.infer<typeof schema>;
 export default function SignUpPage() {
   const { signUpWithEmail, signInWithGoogle, authError, clearAuthError } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const from = (location.state as { from?: { pathname: string; search?: string } })?.from;
+  const fromPath = from ? `${from.pathname}${from.search || ''}` : '/';
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -35,8 +39,8 @@ export default function SignUpPage() {
     try {
       clearAuthError();
       await signUpWithEmail(data.email, data.password, data.displayName);
-      navigate('/dashboard', { replace: true });
-    } catch {}
+      navigate(fromPath, { replace: true });
+    } catch { }
   };
 
   const handleGoogle = async () => {
@@ -44,7 +48,7 @@ export default function SignUpPage() {
       setGoogleLoading(true);
       clearAuthError();
       await signInWithGoogle();
-      navigate('/dashboard', { replace: true });
+      navigate(fromPath, { replace: true });
     } catch {
     } finally {
       setGoogleLoading(false);
@@ -175,7 +179,7 @@ export default function SignUpPage() {
 
             <p className="text-center text-xs text-metal-500">
               Already have an account?{' '}
-              <Link to="/signin" className="text-navy-700 font-semibold hover:text-navy-900">
+              <Link to="/signin" state={from ? { from } : undefined} className="text-navy-700 font-semibold hover:text-navy-900">
                 Sign in
               </Link>
             </p>

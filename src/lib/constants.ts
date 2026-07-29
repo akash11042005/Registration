@@ -4,19 +4,27 @@
 
 // Event start date/time — edit this single constant to update all countdown timers
 export const EVENT_START_DATE = new Date('2026-09-14T09:00:00+05:30'); // Monday 09:00 AM IST
-export const EVENT_END_DATE   = new Date('2026-09-18T17:00:00+05:30'); // Friday 5:00 PM IST
+export const EVENT_END_DATE = new Date('2026-09-18T17:00:00+05:30'); // Friday 5:00 PM IST
+
+// Teams can edit their own registration details (members, mentor, college, etc.)
+// up until this moment — after that, edits must go through an organizer.
+// Kept separate from EVENT_START_DATE so you can close editing earlier
+// (e.g. a few days before the event) without touching the countdown timers.
+// IMPORTANT: this same cutoff is duplicated in firestore.rules (Firestore
+// rules can't import this file) — keep both in sync if you change it.
+export const REGISTRATION_EDIT_DEADLINE = new Date('2026-09-14T09:00:00+05:30');
 
 // Registration fee (INR)
-export const BASE_REGISTRATION_FEE = 500;
+export const BASE_REGISTRATION_FEE = 1; // TEMPORARY for testing — real price is ₹300. Restore to 300 before the real event.
 export const HOME_DELIVERY_ADDON_FEE = 300;
 
 // UPI payment config
-export const UPI_ID   = 'metallurgy@walchandsangli.ac.in';
+export const UPI_ID = 'metallurgy@walchandsangli.ac.in';
 export const UPI_PAYEE_NAME = 'AAYODHYAM 2026 WCE';
 export const UPI_TRANSACTION_NOTE = 'AAYODHYAM2026 Registration Fee';
 
 // Task slots — max teams per problem statement
-export const MAX_TEAMS_PER_TASK = 5;
+export const MAX_TEAMS_PER_TASK = 8;
 
 // Admin email allowlist (add multiple organizer/admin emails here)
 export const ADMIN_EMAILS: string[] = [
@@ -24,6 +32,14 @@ export const ADMIN_EMAILS: string[] = [
   'admin@aayodhyam2026.in',
   // Add more admin emails here
 ];
+
+// Sign-In convenience shortcut: typing this username in the Sign In email field
+// resolves to ADMIN_LOGIN_EMAIL before the request reaches Firebase. This is a
+// UX shortcut ONLY — the actual password check still happens server-side in
+// Firebase Auth against the real account you create for ADMIN_LOGIN_EMAIL.
+// Create that account once in Firebase Console → Authentication → Add user.
+export const ADMIN_LOGIN_USERNAME = 'admin';
+export const ADMIN_LOGIN_EMAIL = 'admin@aayodhyam2026.in';
 
 // Organization info
 export const ORG = {

@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import HeroCrystalLattice from '@/components/HeroCrystalLattice';
 import {
   ArrowRight,
   ChevronRight,
@@ -9,10 +10,6 @@ import {
   Trophy,
   Network,
   Microscope,
-  Flame,
-  Dumbbell,
-  Atom,
-  BrainCircuit,
   CheckCircle2,
   Clock,
   AlertTriangle,
@@ -25,57 +22,6 @@ import { useRegistrationStats } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import { cn } from '@/lib/utils';
 
-// ─────────────────────────────────────────────────
-// Track category cards data
-// ─────────────────────────────────────────────────
-const TRACKS = [
-  {
-    icon: Microscope,
-    label: 'Metallography',
-    color: 'from-blue-50 to-blue-100 border-blue-200',
-    iconColor: 'text-blue-600',
-    accent: 'bg-blue-600',
-    count: PROBLEM_STATEMENTS.filter(p => p.category === 'Metallography').length,
-    description: 'Microstructural characterization, grain analysis, and quantitative metallography techniques.',
-  },
-  {
-    icon: Flame,
-    label: 'Heat Treatment',
-    color: 'from-orange-50 to-orange-100 border-orange-200',
-    iconColor: 'text-orange-600',
-    accent: 'bg-orange-600',
-    count: PROBLEM_STATEMENTS.filter(p => p.category === 'Heat Treatment').length,
-    description: 'Quenching, tempering, annealing, and hardenability characterization.',
-  },
-  {
-    icon: Dumbbell,
-    label: 'Mechanical Testing',
-    color: 'from-purple-50 to-purple-100 border-purple-200',
-    iconColor: 'text-purple-600',
-    accent: 'bg-purple-600',
-    count: PROBLEM_STATEMENTS.filter(p => p.category === 'Mechanical Testing').length,
-    description: 'Tensile testing, strain ageing, impact toughness, and deformation behavior.',
-  },
-  {
-    icon: Atom,
-    label: 'Phase Transformations',
-    color: 'from-emerald-50 to-emerald-100 border-emerald-200',
-    iconColor: 'text-emerald-600',
-    accent: 'bg-emerald-600',
-    count: PROBLEM_STATEMENTS.filter(p => p.category === 'Phase Transformations').length,
-    description: 'Grain refinement, overheating effects, and thermomechanical processing.',
-  },
-  {
-    icon: BrainCircuit,
-    label: 'Computation & AI',
-    color: 'from-navy-50 to-navy-100 border-navy-200',
-    iconColor: 'text-navy-600',
-    accent: 'bg-navy-600',
-    count: PROBLEM_STATEMENTS.filter(p => p.category === 'Computation & AI').length,
-    description: 'Python/OpenCV pipelines, automated image analysis, and AI-assisted materials evaluation.',
-  },
-];
-
 const RULES_HIGHLIGHTS = [
   {
     icon: Users,
@@ -86,7 +32,7 @@ const RULES_HIGHLIGHTS = [
   {
     icon: Clock,
     title: 'Task Slot Cap',
-    desc: 'Maximum 5 teams per problem statement. First-come, first-served.',
+    desc: 'Maximum 8 teams per problem statement. First-come, first-served.',
     color: 'text-orange-600 bg-orange-50',
   },
   {
@@ -183,78 +129,12 @@ function LatticeSVG() {
 }
 
 // ─────────────────────────────────────────────────
-// Crystal / micrograph illustration SVG
+// Hero illustration wrapper — 3D BCC crystal lattice
 // ─────────────────────────────────────────────────
 function MaterialsIllustration() {
   return (
-    <div className="relative w-full max-w-lg mx-auto aspect-square">
-      <motion.div
-        animate={{ rotate: [0, 2, -2, 0] }}
-        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-        className="w-full h-full"
-      >
-        <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full drop-shadow-2xl">
-          {/* Background circle */}
-          <circle cx="200" cy="200" r="190" fill="url(#bgGrad)" />
-          <defs>
-            <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#2d35a4" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#0f1230" stopOpacity="0.6" />
-            </radialGradient>
-          </defs>
-
-          {/* Grain boundary simulation — Voronoi-inspired polygons */}
-          <polygon points="200,50 280,120 260,220 170,240 110,170 140,80" fill="none" stroke="#d4a017" strokeWidth="1.5" strokeOpacity="0.6" />
-          <polygon points="280,120 350,100 380,200 310,260 260,220" fill="none" stroke="#d4a017" strokeWidth="1" strokeOpacity="0.4" />
-          <polygon points="110,170 50,200 70,300 170,320 200,240 140,220" fill="none" stroke="#d4a017" strokeWidth="1" strokeOpacity="0.4" />
-          <polygon points="200,240 260,220 310,260 300,340 220,360 160,310 170,240" fill="none" stroke="#d4a017" strokeWidth="1.5" strokeOpacity="0.5" />
-          <polygon points="140,80 200,50 260,80 280,120 200,120 140,100" fill="none" stroke="#facc15" strokeWidth="1" strokeOpacity="0.3" />
-
-          {/* Crystal atoms */}
-          {[
-            [200, 50], [280, 120], [260, 220], [200, 240], [170, 240], [110, 170], [140, 80],
-            [350, 100], [380, 200], [310, 260], [50, 200], [70, 300], [170, 320], [300, 340], [220, 360], [160, 310]
-          ].map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r="5" fill="#facc15" fillOpacity="0.8" />
-          ))}
-
-          {/* Inner lattice structure */}
-          <circle cx="200" cy="200" r="60" fill="none" stroke="#d4a017" strokeWidth="1" strokeOpacity="0.4" strokeDasharray="4 4" />
-          <circle cx="200" cy="200" r="30" fill="#d4a017" fillOpacity="0.15" />
-          <circle cx="200" cy="200" r="10" fill="#facc15" fillOpacity="0.9" />
-
-          {/* Lines to center */}
-          {[[200, 50], [280, 120], [260, 220], [200, 240], [110, 170], [140, 80]].map(([x, y], i) => (
-            <line key={i} x1="200" y1="200" x2={x} y2={y} stroke="#d4a017" strokeWidth="0.7" strokeOpacity="0.25" strokeDasharray="3 3" />
-          ))}
-
-          {/* Floating label */}
-          <text x="200" y="380" textAnchor="middle" fill="#d4a017" fontSize="11" fontFamily="Inter" fontWeight="600" letterSpacing="3" opacity="0.7">
-            AAYODHYAM 2026
-          </text>
-          <text x="200" y="26" textAnchor="middle" fill="#facc15" fontSize="9" fontFamily="Inter" fontWeight="500" letterSpacing="2" opacity="0.6">
-            GRAIN BOUNDARY SIMULATION
-          </text>
-        </svg>
-      </motion.div>
-
-      {/* Floating badges */}
-      <motion.div
-        animate={{ y: [-6, 6, -6] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute -right-4 top-1/4 bg-white rounded-xl px-3 py-2 shadow-elevated border border-metal-100"
-      >
-        <p className="text-xs font-bold text-navy-900">11 Problem</p>
-        <p className="text-xs text-metal-500">Statements</p>
-      </motion.div>
-      <motion.div
-        animate={{ y: [6, -6, 6] }}
-        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-        className="absolute -left-4 bottom-1/4 bg-gold-500 rounded-xl px-3 py-2 shadow-gold"
-      >
-        <p className="text-xs font-bold text-navy-950">5 Categories</p>
-        <p className="text-xs text-navy-900 opacity-70">of research</p>
-      </motion.div>
+    <div className="relative w-full h-[420px] sm:h-[480px] lg:h-[540px]">
+      <HeroCrystalLattice />
     </div>
   );
 }
@@ -304,12 +184,12 @@ export default function HomePage() {
                 </p>
 
                 <div className="flex flex-wrap gap-3 mb-10">
-                  <Link to="/register" className="btn-gold px-7 py-3.5 text-base font-bold">
-                    Register Team
+                  <Link to="/problem-statements" className="btn-gold px-7 py-3.5 text-base font-bold">
+                    View Problem Statements
                     <ArrowRight className="w-4 h-4" />
                   </Link>
-                  <Link to="/problem-statements" className="btn-outline border-white/30 text-white hover:bg-white/10 hover:text-white px-7 py-3.5 text-base">
-                    View Problem Statements
+                  <Link to="/timeline" className="btn-outline border-white/30 text-white hover:bg-white/10 hover:text-white px-7 py-3.5 text-base">
+                    View Timeline
                   </Link>
                 </div>
 
@@ -325,7 +205,7 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    Open to all Engineering Students
+                    Open to all second year Engineering Students
                   </span>
                 </div>
               </motion.div>
@@ -378,59 +258,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Tracks / Categories ── */}
-      <section className="section-padding bg-metal-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div {...fadeInUp} className="text-center mb-12">
-            <span className="section-label">Problem Statement Tracks</span>
-            <h2 className="text-headline text-navy-900 mb-4">Five Domains of Innovation</h2>
-            <p className="text-body-lg text-metal-600 max-w-2xl mx-auto">
-              Choose your area of expertise and tackle a cutting-edge challenge in metallurgy and materials science.
-            </p>
-          </motion.div>
-
-          <motion.div
-            variants={{ animate: { transition: { staggerChildren: 0.1 } } }}
-            initial="initial"
-            whileInView="animate"
-            viewport={{ once: true }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            {TRACKS.map((track, i) => {
-              const Icon = track.icon;
-              return (
-                <motion.div
-                  key={track.label}
-                  variants={{ initial: { opacity: 0, y: 24 }, animate: { opacity: 1, y: 0, transition: { duration: 0.4 } } }}
-                  className={cn(
-                    'card-hover border p-6 bg-gradient-to-br cursor-pointer',
-                    track.color,
-                    i === 4 && 'md:col-span-2 lg:col-span-1'
-                  )}
-                >
-                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center mb-4', track.iconColor, 'bg-white shadow-sm')}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-title text-navy-900 text-base font-bold">{track.label}</h3>
-                    <span className="text-xs font-bold text-white px-2 py-0.5 rounded-full" style={{ background: track.iconColor.replace('text-', '#').replace('-600', '') }}>
-                      {track.count} tasks
-                    </span>
-                  </div>
-                  <p className="text-sm text-metal-600 leading-relaxed">{track.description}</p>
-                  <Link
-                    to={`/problem-statements?cat=${encodeURIComponent(track.label)}`}
-                    className="inline-flex items-center gap-1 text-xs font-semibold mt-4 hover:gap-2 transition-all text-metal-700 hover:text-navy-900"
-                  >
-                    View tasks <ChevronRight className="w-3.5 h-3.5" />
-                  </Link>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </div>
-      </section>
-
       {/* ── Why Participate ── */}
       <section className="section-padding bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -441,7 +268,7 @@ export default function HomePage() {
                 Where Engineering Meets Innovation
               </h2>
               <p className="text-body-lg text-metal-600 mb-8">
-                AAYODHYAM 2026 is more than a competition — it's a week-long immersion into the forefront of materials science and metallurgical engineering.
+                AAYODHYAM 2026 is more than a competition — it's a week-long immersion into the forefront of materials science and mechanical engineering.
               </p>
               <div className="space-y-5">
                 {WHY_PARTICIPATE.map((item) => {
@@ -550,7 +377,7 @@ export default function HomePage() {
               <h2 className="text-headline text-navy-900">Featured Challenges</h2>
             </div>
             <Link to="/problem-statements" className="btn-outline whitespace-nowrap shrink-0">
-              View All 11 Tasks <ArrowRight className="w-4 h-4" />
+              View All 10 Tasks <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
 
@@ -558,16 +385,7 @@ export default function HomePage() {
             {PROBLEM_STATEMENTS.slice(0, 3).map((ps) => (
               <motion.div key={ps.id} {...fadeInUp} className="card-hover p-5">
                 <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs font-semibold text-metal-500 bg-metal-100 px-2.5 py-1 rounded-full">
-                    {ps.category}
-                  </span>
-                  <span className={cn('badge',
-                    ps.difficulty === 'Medium' && 'badge-medium',
-                    ps.difficulty === 'Hard' && 'badge-hard',
-                    ps.difficulty === 'Advanced' && 'badge-advanced'
-                  )}>
-                    {ps.difficulty}
-                  </span>
+                  <span className="text-xs font-bold text-metal-400">#{ps.id}</span>
                 </div>
                 <h3 className="font-bold text-navy-900 mb-2 leading-tight">{ps.title}</h3>
                 <p className="text-sm text-metal-600 leading-relaxed line-clamp-2">{ps.objective}</p>
@@ -610,7 +428,7 @@ export default function HomePage() {
               <div className="w-16 h-16 mx-auto rounded-2xl bg-gold-50 flex items-center justify-center mb-4">
                 <Microscope className="w-8 h-8 text-gold-600" />
               </div>
-              <h3 className="font-bold text-navy-900 mb-2">Dept. of Metallurgy & Materials Engineering</h3>
+              <h3 className="font-bold text-navy-900 mb-2">Dept. of Mechanical Engineering</h3>
               <p className="text-sm text-metal-500">metallurgy@walchandsangli.ac.in</p>
               <p className="text-xs text-metal-400 mt-1">Hosting AAYODHYAM 2026</p>
             </motion.div>
@@ -629,7 +447,7 @@ export default function HomePage() {
             {[
               { q: 'Who can participate?', a: 'Engineering students (B.Tech / M.Tech) from any recognized college across India. Teams of 1–3 members.' },
               { q: 'What happens at WCE lab?', a: 'WCE lab facilities are exclusively for final testing and microstructural evaluation during the jury round. All heat treatment and specimen pre-processing must be done at your home institution.' },
-              { q: 'How many teams per problem statement?', a: 'Maximum 5 teams per problem statement, allocated on a first-come, first-served basis.' },
+              { q: 'How many teams per problem statement?', a: 'Maximum 8 teams per problem statement, allocated on a first-come, first-served basis.' },
               { q: 'Is there a registration fee?', a: 'Yes. A nominal registration fee applies. Details are shown during the registration process.' },
             ].map((faq) => (
               <motion.div key={faq.q} {...fadeInUp} className="card p-5">
@@ -652,11 +470,11 @@ export default function HomePage() {
           <motion.div {...fadeInUp}>
             <h2 className="text-headline text-navy-950 mb-4">Ready to Compete?</h2>
             <p className="text-lg text-navy-800 mb-8 max-w-xl mx-auto">
-              Secure your slot today. Problem statement slots are limited to 5 teams each — don't miss your category.
+              Secure your slot today. Problem statement slots are limited to 8 teams each — don't miss out.
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
-              <Link to="/register" className="btn-primary bg-navy-900 text-white hover:bg-navy-950 px-8 py-4 text-base">
-                Register Your Team
+              <Link to="/problem-statements" className="btn-primary bg-navy-900 text-white hover:bg-navy-950 px-8 py-4 text-base">
+                Choose a Problem Statement
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link to="/contact" className="btn-ghost text-navy-800 hover:bg-navy-900/10 px-8 py-4 text-base">

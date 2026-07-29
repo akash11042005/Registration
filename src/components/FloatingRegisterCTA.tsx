@@ -25,11 +25,11 @@ export default function FloatingRegisterCTA() {
           className="fixed bottom-5 right-5 z-40"
         >
           <Link
-            to="/register"
+            to="/problem-statements"
             className="flex items-center gap-2 px-5 py-3 rounded-full bg-gold-500 text-navy-950 font-bold text-sm shadow-gold hover:bg-gold-600 hover:-translate-y-1 transition-all"
           >
             <Sparkles className="w-4 h-4" />
-            Register Team
+            Choose a Problem Statement
           </Link>
         </motion.div>
       )}

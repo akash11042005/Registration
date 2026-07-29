@@ -52,7 +52,12 @@
     background: #1e2460;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: var(--font-display);
     font-weight: 700;
     line-height: 1.2;
@@ -61,6 +66,7 @@
 }
 
 @layer components {
+
   /* Type scale */
   .text-display {
     font-family: var(--font-display);
@@ -100,34 +106,19 @@
 
   /* Buttons */
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm
-      bg-navy-900 text-white transition-all duration-200
-      hover:bg-navy-950 hover:shadow-navy hover:-translate-y-0.5
-      active:translate-y-0 active:shadow-none
-      focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-2;
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-navy-900 text-white transition-all duration-200 hover:bg-navy-950 hover:shadow-navy hover:-translate-y-0.5 active:translate-y-0 active:shadow-none focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-2;
   }
 
   .btn-gold {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm
-      bg-gold-500 text-navy-950 transition-all duration-200
-      hover:bg-gold-600 hover:shadow-gold hover:-translate-y-0.5
-      active:translate-y-0 active:shadow-none
-      focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2;
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm bg-gold-500 text-navy-950 transition-all duration-200 hover:bg-gold-600 hover:shadow-gold hover:-translate-y-0.5 active:translate-y-0 active:shadow-none focus:outline-none focus:ring-2 focus:ring-gold-500 focus:ring-offset-2;
   }
 
   .btn-outline {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm
-      border-2 border-navy-900 text-navy-900 bg-transparent transition-all duration-200
-      hover:bg-navy-900 hover:text-white hover:-translate-y-0.5
-      active:translate-y-0 active:shadow-none
-      focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-2;
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm border-2 border-navy-900 text-navy-900 bg-transparent transition-all duration-200 hover:bg-navy-900 hover:text-white hover:-translate-y-0.5 active:translate-y-0 active:shadow-none focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-2;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
-      text-metal-700 bg-transparent transition-all duration-150
-      hover:bg-metal-100 hover:text-navy-900
-      focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-1;
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm text-metal-700 bg-transparent transition-all duration-150 hover:bg-metal-100 hover:text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-900 focus:ring-offset-1;
   }
 
   /* Cards */
@@ -150,11 +141,7 @@
 
   /* Form elements */
   .form-input {
-    @apply w-full px-4 py-3 rounded-xl border border-metal-200 bg-white text-metal-900
-      placeholder:text-metal-400 text-sm font-medium
-      transition-all duration-150
-      focus:outline-none focus:ring-2 focus:ring-navy-900 focus:border-navy-900
-      disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply w-full px-4 py-3 rounded-xl border border-metal-200 bg-white text-metal-900 placeholder:text-metal-400 text-sm font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-navy-900 focus:border-navy-900 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .form-label {
@@ -224,7 +211,7 @@
   }
 
   .gradient-navy {
-    background: linear-gradient(135deg, #0f1230 0%, #1e2460 50%, #2d35a4 100%);
+    background: linear-gradient(90deg, #2d35a4 0%, #1e2460 55%, #0f1230 100%);
   }
 
   .lattice-bg {

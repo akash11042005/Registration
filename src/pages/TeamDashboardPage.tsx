@@ -3,23 +3,23 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  User,
   CheckCircle2,
   Clock,
   XCircle,
   FileText,
   Upload,
   Download,
-  Code,
   Megaphone,
-  Plus,
   AlertCircle,
   BookOpen,
-  ArrowRight,
-  ShieldCheck,
   Check,
+  Pencil,
+  X,
+  Users2,
+  GraduationCap,
+  Receipt,
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,9 +28,12 @@ import {
   useSubmissionsByUid,
   useAnnouncements,
   useCreateSubmission,
+  useUpdateRegistrationDetails,
   uploadFile,
 } from '@/hooks/useFirestore';
+import { downloadRegistrationReceipt } from '@/lib/receipt';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
+import { REGISTRATION_EDIT_DEADLINE } from '@/lib/constants';
 import { Submission } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -42,18 +45,36 @@ const submissionSchema = z.object({
 
 type SubmissionFormData = z.infer<typeof submissionSchema>;
 
+const editDetailsSchema = z.object({
+  teamName: z.string().min(3, 'Team name must be at least 3 characters'),
+  leaderPhone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit mobile number'),
+  collegeName: z.string().min(2, 'College name is required'),
+  member1Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  member2Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  mentorName: z.string().min(2, 'Mentor name is required'),
+  mentorEmail: z.union([z.string().email('Enter a valid email'), z.literal('')]).optional(),
+  mentorPhone: z.union([z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit number'), z.literal('')]).optional(),
+});
+
+type EditDetailsFormData = z.infer<typeof editDetailsSchema>;
+
 export default function TeamDashboardPage() {
   const { user } = useAuth();
-  const { data: registration, isLoading: regLoading } = useRegistrationByUid(user?.uid);
+  const { data: registration, isLoading: regLoading, isError: regError, error: regErrorObj } = useRegistrationByUid(user?.uid);
   const { data: submissions = [], isLoading: subLoading } = useSubmissionsByUid(user?.uid);
   const { data: announcements = [] } = useAnnouncements();
 
   const createSubmission = useCreateSubmission();
+  const updateDetails = useUpdateRegistrationDetails();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'resources'>('overview');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editSaved, setEditSaved] = useState(false);
+
+  const editWindowOpen = Date.now() < REGISTRATION_EDIT_DEADLINE.getTime();
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<SubmissionFormData>({
     resolver: zodResolver(submissionSchema),
@@ -152,6 +173,21 @@ export default function TeamDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {regError && (
+          <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800 mb-6 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Couldn't load your registration from Firestore</p>
+              <p className="text-xs mt-1 opacity-90">
+                {regErrorObj instanceof Error ? regErrorObj.message : 'Unknown error'}
+              </p>
+              <p className="text-xs mt-1 opacity-75">
+                Most common causes: the Firestore database hasn't been created yet, or firestore.rules hasn't been published.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Status Alert Banner */}
         {registration ? (
           <div className={cn(
@@ -159,8 +195,8 @@ export default function TeamDashboardPage() {
             registration.paymentStatus === 'verified'
               ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
               : registration.paymentStatus === 'rejected'
-              ? 'bg-red-50 border-red-200 text-red-900'
-              : 'bg-amber-50 border-amber-200 text-amber-900'
+                ? 'bg-red-50 border-red-200 text-red-900'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
           )}>
             <div className="flex items-center gap-3">
               {registration.paymentStatus === 'verified' ? (
@@ -277,6 +313,81 @@ export default function TeamDashboardPage() {
                   <p className="text-xs text-metal-500 mt-1 max-w-sm mx-auto">
                     Complete your team registration to lock in your task allocation.
                   </p>
+                </div>
+              )}
+
+              {/* Team Details Card */}
+              {registration && (
+                <div className="card p-6">
+                  <div className="flex items-center justify-between mb-4 border-b border-metal-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Users2 className="w-4 h-4 text-navy-700" />
+                      <h3 className="font-bold text-navy-900 text-base">Team Details</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => downloadRegistrationReceipt(registration)}
+                        className="btn-outline text-xs px-3 py-1.5"
+                      >
+                        <Receipt className="w-3.5 h-3.5" /> Download Receipt
+                      </button>
+                      {editWindowOpen ? (
+                        <button
+                          onClick={() => setShowEditModal(true)}
+                          className="btn-ghost text-xs px-3 py-1.5"
+                        >
+                          <Pencil className="w-3.5 h-3.5" /> Edit
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-metal-400 font-medium">Editing closed</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-xs">
+                    <div>
+                      <span className="text-metal-500 block">Team Name</span>
+                      <span className="font-semibold text-navy-900">{registration.teamName}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">College Name</span>
+                      <span className="font-semibold text-navy-900">{registration.collegeName}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Leader</span>
+                      <span className="font-semibold text-navy-900">{registration.leaderName} · {registration.leaderPhone}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Leader Email</span>
+                      <span className="font-semibold text-navy-900">{registration.leaderEmail}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Members</span>
+                      <span className="font-semibold text-navy-900">
+                        {[registration.member1Name, registration.member2Name]
+                          .filter(Boolean)
+                          .join(', ') || 'Leader only'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <GraduationCap className="w-3.5 h-3.5 text-metal-400 shrink-0 mt-3" />
+                      <div>
+                        <span className="text-metal-500 block">Mentor</span>
+                        <span className="font-semibold text-navy-900">
+                          {registration.mentorName}
+                          {registration.mentorEmail ? ` · ${registration.mentorEmail}` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Amount Paid</span>
+                      <span className="font-bold text-gold-600">₹{registration.totalFee}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Razorpay Payment ID</span>
+                      <span className="font-mono font-semibold text-navy-900">{registration.transactionId}</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -478,6 +589,145 @@ export default function TeamDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Team Details Modal */}
+      <AnimatePresence>
+        {showEditModal && registration && registration.id && (
+          <EditTeamDetailsModal
+            registration={registration}
+            onClose={() => { setShowEditModal(false); setEditSaved(false); }}
+            onSave={async (fields) => {
+              await updateDetails.mutateAsync({ id: registration.id!, fields });
+              setEditSaved(true);
+              setTimeout(() => {
+                setEditSaved(false);
+                setShowEditModal(false);
+              }, 1200);
+            }}
+            saving={updateDetails.isPending}
+            saved={editSaved}
+          />
+        )}
+      </AnimatePresence>
     </PageTransition>
+  );
+}
+
+function EditTeamDetailsModal({
+  registration,
+  onClose,
+  onSave,
+  saving,
+  saved,
+}: {
+  registration: NonNullable<ReturnType<typeof useRegistrationByUid>['data']>;
+  onClose: () => void;
+  onSave: (fields: EditDetailsFormData) => Promise<void>;
+  saving: boolean;
+  saved: boolean;
+}) {
+  const { register, handleSubmit, formState: { errors } } = useForm<EditDetailsFormData>({
+    resolver: zodResolver(editDetailsSchema),
+    defaultValues: {
+      teamName: registration.teamName,
+      leaderPhone: registration.leaderPhone,
+      collegeName: registration.collegeName,
+      member1Name: registration.member1Name || '',
+      member2Name: registration.member2Name || '',
+      mentorName: registration.mentorName,
+      mentorEmail: registration.mentorEmail || '',
+      mentorPhone: registration.mentorPhone || '',
+    },
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-navy-950/60" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="relative bg-white rounded-2xl p-6 w-full max-w-lg shadow-elevated max-h-[85vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-navy-900 text-lg">Edit Team Details</h2>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-metal-400 hover:bg-metal-100" aria-label="Close">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {saved ? (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-800 font-semibold flex items-center gap-2">
+            <Check className="w-4 h-4" /> Changes saved.
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(onSave)} className="space-y-4">
+            <p className="text-xs text-metal-500">
+              Your leader email, task, and payment details can't be changed here — contact the organizers for those.
+            </p>
+
+            <div>
+              <label className="form-label" htmlFor="edit-teamName">Team Name</label>
+              <input {...register('teamName')} id="edit-teamName" className="form-input" />
+              {errors.teamName && <p className="form-error">{errors.teamName.message}</p>}
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label" htmlFor="edit-leaderPhone">Leader Contact Number</label>
+                <input {...register('leaderPhone')} id="edit-leaderPhone" className="form-input" />
+                {errors.leaderPhone && <p className="form-error">{errors.leaderPhone.message}</p>}
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-collegeName">College Name</label>
+                <input {...register('collegeName')} id="edit-collegeName" className="form-input" />
+                {errors.collegeName && <p className="form-error">{errors.collegeName.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label" htmlFor="edit-member1">Member 1 Name (Optional)</label>
+                <input {...register('member1Name')} id="edit-member1" className="form-input" />
+                {errors.member1Name && <p className="form-error">{errors.member1Name.message}</p>}
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-member2">Member 2 Name (Optional)</label>
+                <input {...register('member2Name')} id="edit-member2" className="form-input" />
+                {errors.member2Name && <p className="form-error">{errors.member2Name.message}</p>}
+              </div>
+            </div>
+
+            <div>
+              <label className="form-label" htmlFor="edit-mentorName">Mentor Name</label>
+              <input {...register('mentorName')} id="edit-mentorName" className="form-input" />
+              {errors.mentorName && <p className="form-error">{errors.mentorName.message}</p>}
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label" htmlFor="edit-mentorEmail">Mentor Email (Optional)</label>
+                <input {...register('mentorEmail')} id="edit-mentorEmail" className="form-input" />
+                {errors.mentorEmail && <p className="form-error">{errors.mentorEmail.message}</p>}
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-mentorPhone">Mentor Contact (Optional)</label>
+                <input {...register('mentorPhone')} id="edit-mentorPhone" className="form-input" />
+                {errors.mentorPhone && <p className="form-error">{errors.mentorPhone.message}</p>}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={onClose} className="btn-ghost flex-1 justify-center text-xs">
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className="btn-primary flex-1 justify-center text-xs">
+                {saving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.div>
+    </div>
   );
 }

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import QRCode from 'react-qr-code';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   Check,
   ChevronRight,
@@ -12,27 +12,21 @@ import {
   Users,
   CreditCard,
   CheckCircle2,
-  Copy,
   AlertTriangle,
-  Upload,
   Printer,
-  Download,
   ArrowRight,
   ShieldCheck,
-  Building,
-  GraduationCap,
   Sparkles,
+  Clock,
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTaskRegistrationCounts, useCreateRegistration, uploadFile } from '@/hooks/useFirestore';
+import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
+import { payWithRazorpay } from '@/lib/razorpay';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import {
   BASE_REGISTRATION_FEE,
   HOME_DELIVERY_ADDON_FEE,
-  UPI_ID,
-  UPI_PAYEE_NAME,
-  UPI_TRANSACTION_NOTE,
   MAX_TEAMS_PER_TASK,
   ORG,
 } from '@/lib/constants';
@@ -47,15 +41,16 @@ const step1Schema = z.object({
   leaderName: z.string().min(2, 'Leader name is required'),
   leaderEmail: z.string().email('Valid email is required'),
   leaderPhone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit mobile number'),
-  member2: z.string().optional(),
-  member3: z.string().optional(),
-  department: z.string().min(2, 'Department is required'),
-  year: z.string().min(1, 'Academic year is required'),
+  collegeName: z.string().min(2, 'College name is required'),
+  member1Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  member2Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  mentorName: z.string().min(2, 'Mentor name is required'),
+  mentorEmail: z.union([z.string().email('Enter a valid email'), z.literal('')]).optional(),
+  mentorPhone: z.union([z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit number'), z.literal('')]).optional(),
   taskId: z.number({ message: 'Please select a problem statement' }),
 });
 
 const step2Schema = z.object({
-  transactionId: z.string().min(6, 'UTR / Transaction ID must be at least 6 characters'),
   wantsHomeDelivery: z.boolean(),
 });
 
@@ -71,13 +66,14 @@ export default function RegistrationPage() {
   const defaultTaskId = searchParams.get('task') ? Number(searchParams.get('task')) : undefined;
 
   const taskCounts = useTaskRegistrationCounts();
-  const createReg = useCreateRegistration();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [copiedUpi, setCopiedUpi] = useState(false);
-  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
-  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [activeHold, setActiveHold] = useState<{ holdId: string; expiresAt: number } | null>(null);
+  const [holdSecondsLeft, setHoldSecondsLeft] = useState<number | null>(null);
+  const activeHoldRef = useRef<{ holdId: string; expiresAt: number } | null>(null);
+  const qc = useQueryClient();
   const [completedRegistration, setCompletedRegistration] = useState<Registration | null>(null);
 
   // Form states
@@ -88,10 +84,12 @@ export default function RegistrationPage() {
       leaderName: user?.displayName || '',
       leaderEmail: user?.email || '',
       leaderPhone: '',
-      member2: '',
-      member3: '',
-      department: 'Metallurgy & Materials Engineering',
-      year: '3rd Year B.Tech',
+      collegeName: '',
+      member1Name: '',
+      member2Name: '',
+      mentorName: '',
+      mentorEmail: '',
+      mentorPhone: '',
       taskId: defaultTaskId,
     },
   });
@@ -99,7 +97,6 @@ export default function RegistrationPage() {
   const step2Form = useForm<Step2Data>({
     resolver: zodResolver(step2Schema),
     defaultValues: {
-      transactionId: '',
       wantsHomeDelivery: false,
     },
   });
@@ -112,7 +109,7 @@ export default function RegistrationPage() {
         const parsed = JSON.parse(saved);
         if (parsed.step1) step1Form.reset(parsed.step1);
         if (parsed.step2) step2Form.reset(parsed.step2);
-      } catch {}
+      } catch { }
     }
   }, []);
 
@@ -137,9 +134,6 @@ export default function RegistrationPage() {
 
   const totalFee = BASE_REGISTRATION_FEE + (wantsHomeDelivery ? HOME_DELIVERY_ADDON_FEE : 0);
 
-  // UPI deep link for QR code
-  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(UPI_PAYEE_NAME)}&am=${totalFee}&cu=INR&tn=${encodeURIComponent(UPI_TRANSACTION_NOTE)}`;
-
   // Require auth to start
   if (!user) {
     return (
@@ -154,10 +148,18 @@ export default function RegistrationPage() {
               Please sign in or create an account to start your team registration for AAYODHYAM 2026.
             </p>
             <div className="flex flex-col gap-3">
-              <Link to="/signin" state={{ from: { pathname: '/register' } }} className="btn-primary justify-center">
+              <Link
+                to="/signin"
+                state={{ from: { pathname: '/register', search: defaultTaskId ? `?task=${defaultTaskId}` : '' } }}
+                className="btn-primary justify-center"
+              >
                 Sign In to Continue
               </Link>
-              <Link to="/signup" className="btn-outline justify-center">
+              <Link
+                to="/signup"
+                state={{ from: { pathname: '/register', search: defaultTaskId ? `?task=${defaultTaskId}` : '' } }}
+                className="btn-outline justify-center"
+              >
                 Create Account
               </Link>
             </div>
@@ -172,7 +174,7 @@ export default function RegistrationPage() {
     // Check if task is full
     const count = taskCounts[data.taskId] || 0;
     if (count >= MAX_TEAMS_PER_TASK) {
-      step1Form.setError('taskId', { message: 'This problem statement has reached its 5-team cap. Please select another task.' });
+      step1Form.setError('taskId', { message: 'This problem statement has reached its 8-team cap. Please select another task.' });
       return;
     }
     // Save draft
@@ -188,77 +190,149 @@ export default function RegistrationPage() {
     setStep(3);
   };
 
-  // Handle screenshot file upload
-  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setScreenshotFile(file);
-      const url = URL.createObjectURL(file);
-      setScreenshotPreview(url);
+  // Final submit: opens Razorpay checkout, then asks the server to verify
+  // the payment and create the registration (server-authoritative — this
+  // client function never sets paymentStatus itself).
+  // Keep a ref mirror of the active hold so the unmount cleanup below
+  // (which can't see fresh state) always knows the latest holdId.
+  useEffect(() => {
+    activeHoldRef.current = activeHold;
+  }, [activeHold]);
+
+  // Live countdown display while a hold is active.
+  useEffect(() => {
+    if (!activeHold) {
+      setHoldSecondsLeft(null);
+      return;
+    }
+    const tick = () => {
+      const secondsLeft = Math.max(0, Math.round((activeHold.expiresAt - Date.now()) / 1000));
+      setHoldSecondsLeft(secondsLeft);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [activeHold]);
+
+  const releaseHold = async (holdId: string) => {
+    try {
+      await fetch('/api/payment/release-hold', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ holdId }),
+      });
+    } catch {
+      // Non-fatal — the hold will still expire on its own after 2 minutes.
+    } finally {
+      qc.invalidateQueries({ queryKey: ['taskCounts'] });
     }
   };
 
-  // Final submit
+  // If the user navigates away or closes the tab while a hold is active,
+  // release it immediately rather than making others wait out the full 2 minutes.
+  useEffect(() => {
+    return () => {
+      if (activeHoldRef.current) {
+        navigator.sendBeacon?.(
+          '/api/payment/release-hold',
+          new Blob([JSON.stringify({ holdId: activeHoldRef.current.holdId })], { type: 'application/json' })
+        );
+      }
+    };
+  }, []);
+
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
+    setPaymentError(null);
+    let holdId: string | undefined;
     try {
       const step1 = step1Form.getValues();
       const step2 = step2Form.getValues();
 
-      // Generate Registration ID (format AAY-XXXXXX)
-      const randomId = Math.floor(100000 + Math.random() * 900000);
-      const regId = `AAY-${randomId}`;
-
-      let screenshotUrl: string | undefined = undefined;
-
-      if (screenshotFile) {
-        try {
-          screenshotUrl = await uploadFile(screenshotFile, `payment-screenshots/${regId}_${Date.now()}_${screenshotFile.name}`);
-        } catch (err) {
-          console.warn('Screenshot upload failed, continuing with registration:', err);
-        }
+      // Reserve a 2-minute slot hold BEFORE opening checkout, so the task
+      // can't silently fill up while this user is mid-payment. This is a
+      // courtesy hold for UX only — api/payment/verify.ts still does its
+      // own authoritative, transactional capacity check regardless of
+      // what happens here.
+      const reserveRes = await fetch('/api/payment/reserve-slot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskId: step1.taskId, uid: user.uid }),
+      });
+      const reserveBody = await reserveRes.json();
+      if (!reserveRes.ok) {
+        setPaymentError(reserveBody.error || 'This problem statement just reached its team cap. Please choose another before paying.');
+        setIsSubmitting(false);
+        qc.invalidateQueries({ queryKey: ['taskCounts'] });
+        return;
       }
+      holdId = reserveBody.holdId as string;
+      setActiveHold({ holdId, expiresAt: reserveBody.expiresAt });
+      qc.invalidateQueries({ queryKey: ['taskCounts'] });
 
-      const regData: Omit<Registration, 'id'> = {
-        registrationId: regId,
-        teamName: step1.teamName,
-        leaderName: step1.leaderName,
-        leaderEmail: step1.leaderEmail,
-        leaderPhone: step1.leaderPhone,
-        member2: step1.member2 || undefined,
-        member3: step1.member3 || undefined,
-        department: step1.department,
-        year: step1.year,
-        taskId: step1.taskId,
-        taskTitle: selectedTask?.title || 'Custom Problem Statement',
-        transactionId: step2.transactionId,
-        paymentScreenshotUrl: screenshotUrl,
-        paymentStatus: 'pending',
-        uid: user.uid,
+      const paymentResult = await payWithRazorpay({
         wantsHomeDelivery: step2.wantsHomeDelivery,
-        totalFee,
-        createdAt: new Date().toISOString(),
-      };
+        name: step1.leaderName,
+        email: step1.leaderEmail,
+        contact: step1.leaderPhone,
+        taskId: step1.taskId,
+        uid: user.uid,
+      });
 
-      await createReg.mutateAsync(regData);
+      const verifyRes = await fetch('/api/payment/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...paymentResult,
+          holdId,
+          registration: {
+            teamName: step1.teamName,
+            leaderName: step1.leaderName,
+            leaderEmail: step1.leaderEmail,
+            leaderPhone: step1.leaderPhone,
+            collegeName: step1.collegeName,
+            member1Name: step1.member1Name || undefined,
+            member2Name: step1.member2Name || undefined,
+            mentorName: step1.mentorName,
+            mentorEmail: step1.mentorEmail || undefined,
+            mentorPhone: step1.mentorPhone || undefined,
+            taskId: step1.taskId,
+            taskTitle: selectedTask?.title || 'Custom Problem Statement',
+            uid: user.uid,
+            wantsHomeDelivery: step2.wantsHomeDelivery,
+          },
+        }),
+      });
+
+      const body = await verifyRes.json();
+      if (!verifyRes.ok) {
+        throw new Error(body.error || 'Payment verification failed. Please contact the organizers.');
+      }
 
       // Clear local draft
       localStorage.removeItem(DRAFT_KEY);
 
-      setCompletedRegistration(regData as Registration);
+      setActiveHold(null);
+      setCompletedRegistration(body as Registration);
       setStep(4); // Pass confirmation screen
     } catch (err) {
-      console.error('Registration submit error:', err);
-      alert('An error occurred while submitting your registration. Please try again.');
+      console.error('Registration/payment error:', err);
+      const message = err instanceof Error ? err.message : 'Something went wrong during payment. Please try again.';
+      // A dismissed/cancelled Razorpay popup rejects with this exact message
+      // (see src/lib/razorpay.ts) — free the slot immediately in that case
+      // rather than making others wait out the full hold.
+      setPaymentError(
+        message.includes('Payment window closed')
+          ? 'Payment was cancelled. Your slot reservation has been released — you can try again anytime.'
+          : message
+      );
+      if (holdId) {
+        await releaseHold(holdId);
+      }
+      setActiveHold(null);
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const copyUpi = () => {
-    navigator.clipboard.writeText(UPI_ID);
-    setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2000);
   };
 
   return (
@@ -283,30 +357,44 @@ export default function RegistrationPage() {
                 { s: 1, label: 'Team & Task', icon: Users },
                 { s: 2, label: 'Payment', icon: CreditCard },
                 { s: 3, label: 'Review & Submit', icon: CheckCircle2 },
-              ].map(({ s, label, icon: Icon }) => (
-                <div key={s} className="relative z-10 flex flex-col items-center">
-                  <div
+              ].map(({ s, label, icon: Icon }) => {
+                const isCompleted = step > s;
+                const isClickable = isCompleted && !isSubmitting;
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => isClickable && setStep(s as 1 | 2 | 3)}
+                    disabled={!isClickable}
                     className={cn(
-                      'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300',
-                      step === s
-                        ? 'bg-navy-900 text-white ring-4 ring-navy-100 shadow-navy'
-                        : step > s
-                        ? 'bg-emerald-500 text-white'
-                        : 'bg-white border-2 border-metal-300 text-metal-500'
+                      'relative z-10 flex flex-col items-center bg-transparent border-none p-0',
+                      isClickable ? 'cursor-pointer' : 'cursor-default'
                     )}
+                    aria-label={isClickable ? `Go back to ${label}` : label}
                   >
-                    {step > s ? <Check className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-                  </div>
-                  <span
-                    className={cn(
-                      'text-xs font-semibold mt-2 transition-colors',
-                      step === s ? 'text-navy-900' : 'text-metal-500'
-                    )}
-                  >
-                    {label}
-                  </span>
-                </div>
-              ))}
+                    <div
+                      className={cn(
+                        'w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300',
+                        step === s
+                          ? 'bg-navy-900 text-white ring-4 ring-navy-100 shadow-navy'
+                          : isCompleted
+                            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                            : 'bg-white border-2 border-metal-300 text-metal-500'
+                      )}
+                    >
+                      {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                    </div>
+                    <span
+                      className={cn(
+                        'text-xs font-semibold mt-2 transition-colors',
+                        step === s ? 'text-navy-900' : isClickable ? 'text-emerald-700' : 'text-metal-500'
+                      )}
+                    >
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -326,62 +414,13 @@ export default function RegistrationPage() {
               <div className="border-b border-metal-100 pb-4">
                 <h2 className="text-title text-navy-900 text-lg font-bold">Step 1: Team & Task Selection</h2>
                 <p className="text-xs text-metal-500 mt-1">
-                  Enter your team details and select a problem statement slot (max 3 members per team).
+                  Enter your team leader, member, and mentor details, then confirm your problem statement.
                 </p>
               </div>
 
               {/* Leader Info */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Team Leader Details</h3>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label" htmlFor="leaderName">Leader Name *</label>
-                    <input
-                      {...step1Form.register('leaderName')}
-                      id="leaderName"
-                      className={cn('form-input', step1Form.formState.errors.leaderName && 'border-red-400')}
-                      placeholder="Full Name"
-                    />
-                    {step1Form.formState.errors.leaderName && (
-                      <p className="form-error">{step1Form.formState.errors.leaderName.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="form-label" htmlFor="leaderEmail">Leader Email *</label>
-                    <input
-                      {...step1Form.register('leaderEmail')}
-                      id="leaderEmail"
-                      type="email"
-                      className={cn('form-input', step1Form.formState.errors.leaderEmail && 'border-red-400')}
-                      placeholder="leader@college.edu"
-                    />
-                    {step1Form.formState.errors.leaderEmail && (
-                      <p className="form-error">{step1Form.formState.errors.leaderEmail.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="form-label" htmlFor="leaderPhone">WhatsApp / Mobile Number *</label>
-                  <input
-                    {...step1Form.register('leaderPhone')}
-                    id="leaderPhone"
-                    type="tel"
-                    maxLength={10}
-                    className={cn('form-input', step1Form.formState.errors.leaderPhone && 'border-red-400')}
-                    placeholder="10-digit mobile number"
-                  />
-                  {step1Form.formState.errors.leaderPhone && (
-                    <p className="form-error">{step1Form.formState.errors.leaderPhone.message}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Team Info */}
-              <div className="space-y-4 pt-4 border-t border-metal-100">
-                <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Team & College Info</h3>
 
                 <div>
                   <label className="form-label" htmlFor="teamName">Team Name *</label>
@@ -398,62 +437,150 @@ export default function RegistrationPage() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="form-label" htmlFor="department">Department / Institution *</label>
+                    <label className="form-label" htmlFor="leaderName">Full Name *</label>
                     <input
-                      {...step1Form.register('department')}
-                      id="department"
-                      className={cn('form-input', step1Form.formState.errors.department && 'border-red-400')}
-                      placeholder="e.g. Metallurgy & Materials Engg, COEP"
+                      {...step1Form.register('leaderName')}
+                      id="leaderName"
+                      className={cn('form-input', step1Form.formState.errors.leaderName && 'border-red-400')}
+                      placeholder="Full Name"
                     />
-                    {step1Form.formState.errors.department && (
-                      <p className="form-error">{step1Form.formState.errors.department.message}</p>
+                    {step1Form.formState.errors.leaderName && (
+                      <p className="form-error">{step1Form.formState.errors.leaderName.message}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="year">Academic Year *</label>
-                    <select
-                      {...step1Form.register('year')}
-                      id="year"
-                      className="form-input"
-                    >
-                      <option value="1st Year B.Tech">1st Year B.Tech</option>
-                      <option value="2nd Year B.Tech">2nd Year B.Tech</option>
-                      <option value="3rd Year B.Tech">3rd Year B.Tech</option>
-                      <option value="Final Year B.Tech">Final Year B.Tech</option>
-                      <option value="M.Tech (1st Year)">M.Tech (1st Year)</option>
-                      <option value="M.Tech (2nd Year)">M.Tech (2nd Year)</option>
-                    </select>
+                    <label className="form-label" htmlFor="leaderEmail">Email *</label>
+                    <input
+                      {...step1Form.register('leaderEmail')}
+                      id="leaderEmail"
+                      type="email"
+                      className={cn('form-input', step1Form.formState.errors.leaderEmail && 'border-red-400')}
+                      placeholder="leader@college.edu"
+                    />
+                    {step1Form.formState.errors.leaderEmail && (
+                      <p className="form-error">{step1Form.formState.errors.leaderEmail.message}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="form-label" htmlFor="member2">Member 2 Name (Optional)</label>
+                    <label className="form-label" htmlFor="leaderPhone">Contact Number *</label>
                     <input
-                      {...step1Form.register('member2')}
-                      id="member2"
-                      className="form-input"
-                      placeholder="Full Name"
+                      {...step1Form.register('leaderPhone')}
+                      id="leaderPhone"
+                      type="tel"
+                      maxLength={10}
+                      className={cn('form-input', step1Form.formState.errors.leaderPhone && 'border-red-400')}
+                      placeholder="10-digit mobile number"
                     />
+                    {step1Form.formState.errors.leaderPhone && (
+                      <p className="form-error">{step1Form.formState.errors.leaderPhone.message}</p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="form-label" htmlFor="member3">Member 3 Name (Optional)</label>
+                    <label className="form-label" htmlFor="collegeName">College Name *</label>
                     <input
-                      {...step1Form.register('member3')}
-                      id="member3"
-                      className="form-input"
-                      placeholder="Full Name"
+                      {...step1Form.register('collegeName')}
+                      id="collegeName"
+                      className={cn('form-input', step1Form.formState.errors.collegeName && 'border-red-400')}
+                      placeholder="e.g. Walchand College of Engineering"
                     />
+                    {step1Form.formState.errors.collegeName && (
+                      <p className="form-error">{step1Form.formState.errors.collegeName.message}</p>
+                    )}
                   </div>
                 </div>
-                <p className="text-xs text-metal-500">Note: Hard cap of 3 members per team (Leader + up to 2 members).</p>
+              </div>
+
+              {/* Team Members */}
+              <div className="space-y-4 pt-4 border-t border-metal-100">
+                <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Team Members (Optional)</h3>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label" htmlFor="member1Name">Member 1 Name (Optional)</label>
+                    <input
+                      {...step1Form.register('member1Name')}
+                      id="member1Name"
+                      className={cn('form-input', step1Form.formState.errors.member1Name && 'border-red-400')}
+                      placeholder="Full Name"
+                    />
+                    {step1Form.formState.errors.member1Name && (
+                      <p className="form-error">{step1Form.formState.errors.member1Name.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="member2Name">Member 2 Name (Optional)</label>
+                    <input
+                      {...step1Form.register('member2Name')}
+                      id="member2Name"
+                      className={cn('form-input', step1Form.formState.errors.member2Name && 'border-red-400')}
+                      placeholder="Full Name"
+                    />
+                    {step1Form.formState.errors.member2Name && (
+                      <p className="form-error">{step1Form.formState.errors.member2Name.message}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-metal-500">A team can be just the leader, or the leader plus up to 2 additional members (max team size: 3).</p>
+              </div>
+
+              {/* Mentor Details */}
+              <div className="space-y-4 pt-4 border-t border-metal-100">
+                <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Mentor Details</h3>
+
+                <div>
+                  <label className="form-label" htmlFor="mentorName">Mentor Name *</label>
+                  <input
+                    {...step1Form.register('mentorName')}
+                    id="mentorName"
+                    className={cn('form-input', step1Form.formState.errors.mentorName && 'border-red-400')}
+                    placeholder="Full Name"
+                  />
+                  {step1Form.formState.errors.mentorName && (
+                    <p className="form-error">{step1Form.formState.errors.mentorName.message}</p>
+                  )}
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label" htmlFor="mentorEmail">Mentor Email (Optional)</label>
+                    <input
+                      {...step1Form.register('mentorEmail')}
+                      id="mentorEmail"
+                      type="email"
+                      className={cn('form-input', step1Form.formState.errors.mentorEmail && 'border-red-400')}
+                      placeholder="mentor@college.edu"
+                    />
+                    {step1Form.formState.errors.mentorEmail && (
+                      <p className="form-error">{step1Form.formState.errors.mentorEmail.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="mentorPhone">Mentor Contact Number (Optional)</label>
+                    <input
+                      {...step1Form.register('mentorPhone')}
+                      id="mentorPhone"
+                      type="tel"
+                      maxLength={10}
+                      className={cn('form-input', step1Form.formState.errors.mentorPhone && 'border-red-400')}
+                      placeholder="10-digit mobile number"
+                    />
+                    {step1Form.formState.errors.mentorPhone && (
+                      <p className="form-error">{step1Form.formState.errors.mentorPhone.message}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Task Selection */}
               <div className="space-y-4 pt-4 border-t border-metal-100">
-                <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Select Problem Statement *</h3>
+                <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Selected Problem Statement *</h3>
 
                 {step1Form.formState.errors.taskId && (
                   <p className="text-xs text-red-600 font-semibold p-2.5 bg-red-50 rounded-lg border border-red-200">
@@ -461,54 +588,81 @@ export default function RegistrationPage() {
                   </p>
                 )}
 
-                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                  {PROBLEM_STATEMENTS.map((ps) => {
-                    const count = taskCounts[ps.id] || 0;
-                    const isFull = count >= MAX_TEAMS_PER_TASK;
-                    const isSelected = selectedTaskId === ps.id;
+                {selectedTask && (taskCounts[selectedTask.id] || 0) < MAX_TEAMS_PER_TASK ? (
+                  // Locked summary — task was chosen on the Problem Statements page, no re-selection needed
+                  <div className="p-4 rounded-xl border border-navy-900 bg-navy-50 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-navy-900">#{selectedTask.id}</span>
+                      </div>
+                      <p className="text-sm font-semibold text-navy-900">{selectedTask.title}</p>
+                    </div>
+                    <Link
+                      to="/problem-statements"
+                      className="text-xs font-semibold text-navy-700 hover:text-navy-900 underline shrink-0 whitespace-nowrap"
+                    >
+                      Change
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    {selectedTaskId && (
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                        Your previously selected problem statement is now full. Please choose another below.
+                      </p>
+                    )}
+                    {!selectedTaskId && (
+                      <p className="text-xs text-metal-500">
+                        No problem statement selected yet. Pick one below, or{' '}
+                        <Link to="/problem-statements" className="text-navy-700 font-semibold underline">
+                          browse all problem statements
+                        </Link>.
+                      </p>
+                    )}
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                      {PROBLEM_STATEMENTS.map((ps) => {
+                        const count = taskCounts[ps.id] || 0;
+                        const isFull = count >= MAX_TEAMS_PER_TASK;
+                        const isSelected = selectedTaskId === ps.id;
 
-                    return (
-                      <div
-                        key={ps.id}
-                        onClick={() => {
-                          if (!isFull) step1Form.setValue('taskId', ps.id);
-                        }}
-                        className={cn(
-                          'p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3',
-                          isSelected
-                            ? 'bg-navy-50 border-navy-900 ring-1 ring-navy-900'
-                            : isFull
-                            ? 'bg-metal-50 border-metal-200 opacity-60 cursor-not-allowed'
-                            : 'bg-white border-metal-200 hover:border-navy-300'
-                        )}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-navy-900">#{ps.id}</span>
-                            <span className="text-xs font-semibold text-metal-500 bg-metal-100 px-2 py-0.5 rounded">
-                              {ps.category}
-                            </span>
-                            <span className={cn('badge text-[10px]', ps.difficulty === 'Medium' ? 'badge-medium' : ps.difficulty === 'Hard' ? 'badge-hard' : 'badge-advanced')}>
-                              {ps.difficulty}
-                            </span>
-                          </div>
-                          <p className="text-sm font-semibold text-metal-900 truncate">{ps.title}</p>
-                        </div>
-
-                        <div className="text-right shrink-0">
-                          <span
+                        return (
+                          <div
+                            key={ps.id}
+                            onClick={() => {
+                              if (!isFull) step1Form.setValue('taskId', ps.id);
+                            }}
                             className={cn(
-                              'text-xs font-bold px-2.5 py-1 rounded-full block',
-                              isFull ? 'bg-red-100 text-red-700' : count >= 4 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                              'p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3',
+                              isSelected
+                                ? 'bg-navy-50 border-navy-900 ring-1 ring-navy-900'
+                                : isFull
+                                  ? 'bg-metal-50 border-metal-200 opacity-60 cursor-not-allowed'
+                                  : 'bg-white border-metal-200 hover:border-navy-300'
                             )}
                           >
-                            {count} / {MAX_TEAMS_PER_TASK} groups
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold text-navy-900">#{ps.id}</span>
+                              </div>
+                              <p className="text-sm font-semibold text-metal-900 truncate">{ps.title}</p>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <span
+                                className={cn(
+                                  'text-xs font-bold px-2.5 py-1 rounded-full block',
+                                  isFull ? 'bg-red-100 text-red-700' : count >= 4 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                                )}
+                              >
+                                {count} / {MAX_TEAMS_PER_TASK} groups
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="pt-4 flex justify-end">
@@ -519,7 +673,7 @@ export default function RegistrationPage() {
             </motion.form>
           )}
 
-          {/* STEP 2: PAYMENT */}
+          {/* STEP 2: FEE & ADD-ONS */}
           {step === 2 && (
             <motion.form
               key="step2"
@@ -530,56 +684,27 @@ export default function RegistrationPage() {
               className="card p-6 space-y-6"
             >
               <div className="border-b border-metal-100 pb-4">
-                <h2 className="text-title text-navy-900 text-lg font-bold">Step 2: Registration Payment</h2>
+                <h2 className="text-title text-navy-900 text-lg font-bold">Step 2: Registration Fee</h2>
                 <p className="text-xs text-metal-500 mt-1">
-                  Scan the UPI QR code to complete payment and enter your transaction/UTR ID.
+                  Confirm your fee, then review your details before paying securely via Razorpay.
                 </p>
               </div>
 
-              {/* Payment Details & QR */}
-              <div className="grid md:grid-cols-2 gap-6 items-center bg-metal-50 p-5 rounded-2xl border border-metal-200">
-                <div className="flex flex-col items-center text-center p-3 bg-white rounded-xl border border-metal-200 shadow-sm">
-                  <div className="p-3 bg-white rounded-lg">
-                    <QRCode value={upiDeepLink} size={160} level="M" />
-                  </div>
-                  <p className="text-xs font-bold text-navy-900 mt-2">Scan with Google Pay, PhonePe, Paytm or BHIM</p>
-                  <p className="text-[11px] text-metal-500">Amount: ₹{totalFee}</p>
+              {/* Fee breakdown */}
+              <div className="bg-metal-50 p-5 rounded-2xl border border-metal-200">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-metal-600">Base Registration Fee:</span>
+                  <span className="font-bold text-metal-900">₹{BASE_REGISTRATION_FEE}</span>
                 </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <span className="text-xs font-bold text-metal-400 uppercase tracking-wider">Payee UPI ID</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <code className="bg-white px-3 py-1.5 rounded-lg border text-xs font-mono font-bold text-navy-900 flex-1 truncate">
-                        {UPI_ID}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={copyUpi}
-                        className="btn-ghost text-xs px-2.5 py-1.5 shrink-0"
-                      >
-                        {copiedUpi ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        {copiedUpi ? 'Copied' : 'Copy'}
-                      </button>
-                    </div>
+                {wantsHomeDelivery && (
+                  <div className="flex justify-between text-xs mb-1 text-gold-700 font-medium">
+                    <span>Raw Material Delivery:</span>
+                    <span>+₹{HOME_DELIVERY_ADDON_FEE}</span>
                   </div>
-
-                  <div className="border-t border-metal-200 pt-3">
-                    <div className="flex justify-between text-xs mb-1">
-                      <span className="text-metal-600">Base Registration Fee:</span>
-                      <span className="font-bold text-metal-900">₹{BASE_REGISTRATION_FEE}</span>
-                    </div>
-                    {wantsHomeDelivery && (
-                      <div className="flex justify-between text-xs mb-1 text-gold-700 font-medium">
-                        <span>Raw Material Delivery:</span>
-                        <span>+₹{HOME_DELIVERY_ADDON_FEE}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm font-bold text-navy-900 border-t border-metal-200 pt-2 mt-1">
-                      <span>Total Payable:</span>
-                      <span className="text-gold-600">₹{totalFee}</span>
-                    </div>
-                  </div>
+                )}
+                <div className="flex justify-between text-sm font-bold text-navy-900 border-t border-metal-200 pt-2 mt-1">
+                  <span>Total Payable:</span>
+                  <span className="text-gold-600">₹{totalFee}</span>
                 </div>
               </div>
 
@@ -599,44 +724,11 @@ export default function RegistrationPage() {
                 </label>
               </div>
 
-              {/* Transaction ID & Screenshot */}
-              <div className="space-y-4 pt-4 border-t border-metal-100">
-                <div>
-                  <label className="form-label" htmlFor="transactionId">
-                    UPI / UTR Transaction Reference ID *
-                  </label>
-                  <input
-                    {...step2Form.register('transactionId')}
-                    id="transactionId"
-                    className={cn('form-input font-mono uppercase', step2Form.formState.errors.transactionId && 'border-red-400')}
-                    placeholder="e.g. 324589012345"
-                  />
-                  {step2Form.formState.errors.transactionId && (
-                    <p className="form-error">{step2Form.formState.errors.transactionId.message}</p>
-                  )}
-                  <p className="text-[11px] text-metal-500 mt-1">
-                    Enter the 12-digit UTR or Reference Number from your payment confirmation screen.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="form-label">Payment Screenshot (Optional)</label>
-                  <div className="flex items-center gap-4">
-                    <label className="btn-outline text-xs cursor-pointer">
-                      <Upload className="w-3.5 h-3.5" />
-                      Choose Image
-                      <input type="file" accept="image/*" onChange={handleScreenshotChange} className="hidden" />
-                    </label>
-                    {screenshotFile && (
-                      <span className="text-xs text-emerald-600 font-medium truncate max-w-xs">
-                        ✓ {screenshotFile.name}
-                      </span>
-                    )}
-                  </div>
-                  {screenshotPreview && (
-                    <img src={screenshotPreview} alt="Payment Preview" className="mt-2 h-20 rounded-lg border object-cover" />
-                  )}
-                </div>
+              <div className="p-3 bg-navy-50 border border-navy-100 rounded-xl flex items-start gap-2.5 text-xs text-navy-800">
+                <ShieldCheck className="w-4 h-4 text-navy-700 shrink-0 mt-0.5" />
+                <p>
+                  Payment is collected securely through Razorpay on the next screen (UPI, cards, net banking, and wallets accepted). Your registration is only created after the payment is verified.
+                </p>
               </div>
 
               {/* WCE Lab Usage Policy Notice */}
@@ -684,6 +776,10 @@ export default function RegistrationPage() {
                       <p className="font-semibold text-navy-900">{step1Form.getValues('teamName')}</p>
                     </div>
                     <div>
+                      <span className="text-metal-500">College Name:</span>
+                      <p className="font-semibold text-navy-900">{step1Form.getValues('collegeName')}</p>
+                    </div>
+                    <div>
                       <span className="text-metal-500">Leader Name:</span>
                       <p className="font-semibold text-navy-900">{step1Form.getValues('leaderName')}</p>
                     </div>
@@ -692,27 +788,42 @@ export default function RegistrationPage() {
                       <p className="font-semibold text-navy-900">{step1Form.getValues('leaderEmail')}</p>
                     </div>
                     <div>
-                      <span className="text-metal-500">WhatsApp / Phone:</span>
+                      <span className="text-metal-500">Leader Contact:</span>
                       <p className="font-semibold text-navy-900">{step1Form.getValues('leaderPhone')}</p>
                     </div>
-                    <div>
-                      <span className="text-metal-500">Department / College:</span>
-                      <p className="font-semibold text-navy-900">{step1Form.getValues('department')}</p>
-                    </div>
-                    <div>
-                      <span className="text-metal-500">Academic Year:</span>
-                      <p className="font-semibold text-navy-900">{step1Form.getValues('year')}</p>
-                    </div>
-                    {step1Form.getValues('member2') && (
+                    {step1Form.getValues('member1Name') && (
                       <div>
-                        <span className="text-metal-500">Member 2:</span>
-                        <p className="font-semibold text-navy-900">{step1Form.getValues('member2')}</p>
+                        <span className="text-metal-500">Member 1:</span>
+                        <p className="font-semibold text-navy-900">{step1Form.getValues('member1Name')}</p>
                       </div>
                     )}
-                    {step1Form.getValues('member3') && (
+                    {step1Form.getValues('member2Name') && (
                       <div>
-                        <span className="text-metal-500">Member 3:</span>
-                        <p className="font-semibold text-navy-900">{step1Form.getValues('member3')}</p>
+                        <span className="text-metal-500">Member 2:</span>
+                        <p className="font-semibold text-navy-900">{step1Form.getValues('member2Name')}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mentor Summary */}
+                <div className="space-y-2 pt-4">
+                  <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Mentor Details</h3>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-metal-500">Mentor Name:</span>
+                      <p className="font-semibold text-navy-900">{step1Form.getValues('mentorName')}</p>
+                    </div>
+                    {step1Form.getValues('mentorEmail') && (
+                      <div>
+                        <span className="text-metal-500">Mentor Email:</span>
+                        <p className="font-semibold text-navy-900">{step1Form.getValues('mentorEmail')}</p>
+                      </div>
+                    )}
+                    {step1Form.getValues('mentorPhone') && (
+                      <div>
+                        <span className="text-metal-500">Mentor Contact:</span>
+                        <p className="font-semibold text-navy-900">{step1Form.getValues('mentorPhone')}</p>
                       </div>
                     )}
                   </div>
@@ -724,9 +835,6 @@ export default function RegistrationPage() {
                   <div className="p-3 bg-navy-50 rounded-xl border border-navy-100">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-bold text-navy-900">#{selectedTask?.id}</span>
-                      <span className="text-xs font-semibold text-metal-500 bg-white px-2 py-0.5 rounded">
-                        {selectedTask?.category}
-                      </span>
                     </div>
                     <p className="font-bold text-navy-900">{selectedTask?.title}</p>
                     <p className="text-xs text-metal-600 mt-1">{selectedTask?.objective}</p>
@@ -735,28 +843,48 @@ export default function RegistrationPage() {
 
                 {/* Payment Summary */}
                 <div className="space-y-2 pt-4">
-                  <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Payment Details</h3>
+                  <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Payment</h3>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-metal-500">Transaction Ref / UTR:</span>
-                      <p className="font-mono font-bold text-navy-900 uppercase">{step2Form.getValues('transactionId')}</p>
+                      <span className="text-metal-500">Amount to Pay:</span>
+                      <p className="font-bold text-gold-600">₹{totalFee}</p>
                     </div>
                     <div>
-                      <span className="text-metal-500">Total Fee Paid:</span>
-                      <p className="font-bold text-gold-600">₹{totalFee}</p>
+                      <span className="text-metal-500">Payment Method:</span>
+                      <p className="font-semibold text-navy-900">Razorpay (UPI / Card / Net Banking)</p>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {paymentError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p>{paymentError}</p>
+                </div>
+              )}
+
+              {activeHold && holdSecondsLeft !== null && holdSecondsLeft > 0 && (
+                <div className="p-3 bg-navy-50 border border-navy-200 rounded-xl text-xs text-navy-800 flex items-center gap-2.5">
+                  <Clock className="w-4 h-4 shrink-0 text-navy-700" />
+                  <p>
+                    Your slot is reserved for{' '}
+                    <span className="font-mono font-bold">
+                      {Math.floor(holdSecondsLeft / 60)}:{String(holdSecondsLeft % 60).padStart(2, '0')}
+                    </span>{' '}
+                    — complete payment before it releases back to other teams.
+                  </p>
+                </div>
+              )}
+
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
-                <p className="font-semibold mb-1">✓ Secure Data Storage</p>
-                <p>Your team registration will be securely stored in the AAYODHYAM 2026 database. Payment verification is typically completed within 12 hours.</p>
+                <p className="font-semibold mb-1">✓ Secure Payment & Storage</p>
+                <p>Clicking below opens Razorpay's secure checkout. Your registration is created in our database only after the payment is verified server-side.</p>
               </div>
 
               <div className="pt-4 flex items-center justify-between">
-                <button type="button" onClick={() => setStep(2)} className="btn-ghost text-xs">
-                  <ChevronLeft className="w-4 h-4" /> Back to Payment
+                <button type="button" onClick={() => setStep(2)} className="btn-ghost text-xs" disabled={isSubmitting}>
+                  <ChevronLeft className="w-4 h-4" /> Back to Fee Details
                 </button>
                 <button
                   type="button"
@@ -764,7 +892,7 @@ export default function RegistrationPage() {
                   disabled={isSubmitting}
                   className="btn-gold px-6 py-3 font-bold"
                 >
-                  {isSubmitting ? 'Confirming Registration…' : 'Submit & Generate Pass'}
+                  {isSubmitting ? 'Processing Payment…' : `Pay ₹${totalFee} & Complete Registration`}
                   {!isSubmitting && <Sparkles className="w-4 h-4" />}
                 </button>
               </div>
@@ -826,15 +954,15 @@ export default function RegistrationPage() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-metal-500 block">Department / College:</span>
-                    <span className="font-semibold text-navy-900">{completedRegistration.department}</span>
+                    <span className="text-metal-500 block">College Name:</span>
+                    <span className="font-semibold text-navy-900">{completedRegistration.collegeName}</span>
                   </div>
                   <div>
                     <span className="text-metal-500 block">Payment Status:</span>
-                    <span className="badge badge-pending">Verification Pending</span>
+                    <span className="badge badge-verified">Payment Verified</span>
                   </div>
                   <div>
-                    <span className="text-metal-500 block">Transaction Ref:</span>
+                    <span className="text-metal-500 block">Razorpay Payment ID:</span>
                     <span className="font-mono font-semibold text-navy-900 uppercase">{completedRegistration.transactionId}</span>
                   </div>
                 </div>

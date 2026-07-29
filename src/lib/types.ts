@@ -14,10 +14,12 @@ export interface Registration {
   leaderName: string;
   leaderEmail: string;
   leaderPhone: string;
-  member2?: string;
-  member3?: string;
-  department: string;
-  year: string;
+  collegeName: string;
+  member1Name?: string;
+  member2Name?: string;
+  mentorName: string;
+  mentorEmail?: string;
+  mentorPhone?: string;
   taskId: number;
   taskTitle: string;
   transactionId: string;
@@ -56,10 +58,38 @@ export interface Announcement {
   createdAt: string;
 }
 
+// Firestore document at users/{uid}. Created on first sign-up/sign-in
+// (see src/lib/ensureUserDoc.ts); phone/collegeName/registrationStatus/teamId
+// get filled in once the user actually registers a team (see api/payment/verify.ts).
 export interface UserProfile {
   uid: string;
+  fullName: string;
   email: string;
-  displayName?: string;
+  phone?: string | null;
+  collegeName?: string | null;
   role: UserRole;
+  registrationStatus: 'not_registered' | 'registered';
+  teamId?: string | null;
   photoURL?: string;
+  createdAt: string;
+}
+
+// A Razorpay payment that was verified successfully but couldn't become a
+// registration because the task's slots filled up in between — written by
+// api/payment/verify.ts, resolved manually by an admin.
+export interface PaymentIssue {
+  id?: string;
+  reason: string;
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  registration: {
+    teamName: string;
+    leaderName: string;
+    leaderEmail: string;
+    collegeName: string;
+    taskId: number;
+    taskTitle: string;
+  };
+  totalFee: number;
+  createdAt: unknown;
 }

@@ -21,7 +21,7 @@ const RULES = [
     color: 'text-purple-600 bg-purple-50',
     rules: [
       'Each team must select exactly one problem statement from the catalog.',
-      'A maximum of 5 teams may register for any single problem statement — first-come, first-served.',
+      'A maximum of 8 teams may register for any single problem statement — first-come, first-served.',
       'Once confirmed (after payment verification), task assignment cannot be changed.',
       'Teams must work only on their assigned task for the duration of the event.',
     ],

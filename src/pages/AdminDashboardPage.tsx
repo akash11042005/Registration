@@ -16,6 +16,7 @@ import {
   Layers,
   FileSpreadsheet,
   AlertTriangle,
+  AlertOctagon,
   RefreshCw,
   Eye,
   Check,
@@ -30,24 +31,33 @@ import {
   useDeleteRegistration,
   useCreateAnnouncement,
   useDeleteAnnouncement,
+  usePaymentIssues,
+  useResolvePaymentIssue,
+  useTaskCountsDetailed,
+  useFailedPaymentAttempts,
   clearAllRegistrationsAndSubmissions,
 } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
-import { Registration, Announcement, Submission } from '@/lib/types';
+import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
+import { Registration, Announcement, Submission, PaymentIssue } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export default function AdminDashboardPage() {
   const { user, isAdmin } = useAuth();
-  const { data: registrations = [], isLoading: regLoading, refetch: refetchRegs } = useRegistrations();
+  const { data: registrations = [], isLoading: regLoading, isError: regError, error: regErrorObj, refetch: refetchRegs } = useRegistrations();
   const { data: submissions = [] } = useAllSubmissions();
   const { data: announcements = [] } = useAnnouncements();
+  const { data: paymentIssues = [] } = usePaymentIssues();
+  const { data: taskCountsDetailed = {} } = useTaskCountsDetailed();
+  const { data: failedAttempts = [] } = useFailedPaymentAttempts();
 
   const updateStatus = useUpdateRegistrationStatus();
   const deleteReg = useDeleteRegistration();
   const createAnn = useCreateAnnouncement();
   const deleteAnn = useDeleteAnnouncement();
+  const resolveIssue = useResolvePaymentIssue();
 
-  const [activeTab, setActiveTab] = useState<'registrations' | 'announcements' | 'submissions'>('registrations');
+  const [activeTab, setActiveTab] = useState<'registrations' | 'announcements' | 'submissions' | 'paymentIssues'>('registrations');
   const [search, setSearch] = useState('');
   const [taskFilter, setTaskFilter] = useState<number | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -96,6 +106,20 @@ export default function AdminDashboardPage() {
   const verifiedCount = registrations.filter(r => r.paymentStatus === 'verified').length;
   const pendingCount = registrations.filter(r => r.paymentStatus === 'pending').length;
   const rejectedCount = registrations.filter(r => r.paymentStatus === 'rejected').length;
+  const totalRevenue = registrations
+    .filter(r => r.paymentStatus !== 'rejected')
+    .reduce((sum, r) => sum + (r.totalFee || 0), 0);
+  const totalReserved = Object.values(taskCountsDetailed).reduce((sum, t) => sum + t.held, 0);
+  const totalFailedAttempts = failedAttempts.length;
+
+  // Per-task slot occupancy — confirmed registrations (never counting a
+  // rejected one) PLUS any active 2-minute checkout reservations right now.
+  const taskSlotSummary = PROBLEM_STATEMENTS.map((ps) => {
+    const confirmed = registrations.filter((r) => r.taskId === ps.id && r.paymentStatus !== 'rejected').length;
+    const held = taskCountsDetailed[ps.id]?.held || 0;
+    const occupied = confirmed + held;
+    return { ...ps, confirmed, held, occupied, remaining: Math.max(0, MAX_TEAMS_PER_TASK - occupied) };
+  }).sort((a, b) => a.remaining - b.remaining);
 
   // Export CSV
   const handleExportCSV = () => {
@@ -180,8 +204,23 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {regError && (
+          <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800 mb-6 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Couldn't load registrations from Firestore</p>
+              <p className="text-xs mt-1 opacity-90">
+                {regErrorObj instanceof Error ? regErrorObj.message : 'Unknown error'}
+              </p>
+              <p className="text-xs mt-1 opacity-75">
+                Most common causes: the Firestore database hasn't been created yet, or firestore.rules hasn't been published.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
           <div className="card p-4 text-center">
             <p className="text-2xl font-black text-navy-900">{totalCount}</p>
             <p className="text-xs font-bold text-metal-500 uppercase tracking-wider mt-1">Total Teams</p>
@@ -197,6 +236,70 @@ export default function AdminDashboardPage() {
           <div className="card p-4 text-center border-red-200 bg-red-50/50">
             <p className="text-2xl font-black text-red-700">{rejectedCount}</p>
             <p className="text-xs font-bold text-red-800 uppercase tracking-wider mt-1">Rejected</p>
+          </div>
+          <div className="card p-4 text-center border-gold-200 bg-gold-50/50">
+            <p className="text-2xl font-black text-gold-700">₹{totalRevenue.toLocaleString('en-IN')}</p>
+            <p className="text-xs font-bold text-gold-800 uppercase tracking-wider mt-1">Total Payments</p>
+          </div>
+          <div className="card p-4 text-center border-blue-200 bg-blue-50/50">
+            <p className="text-2xl font-black text-blue-700">{totalReserved}</p>
+            <p className="text-xs font-bold text-blue-800 uppercase tracking-wider mt-1">Reserved Slots</p>
+          </div>
+          <div className="card p-4 text-center border-metal-300 bg-metal-50">
+            <p className="text-2xl font-black text-metal-700">{totalFailedAttempts}</p>
+            <p className="text-xs font-bold text-metal-600 uppercase tracking-wider mt-1">Failed / Cancelled</p>
+          </div>
+        </div>
+
+        {/* Problem Statement Slots */}
+        <div className="card p-5 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="w-4 h-4 text-navy-700" />
+            <h3 className="text-sm font-bold text-navy-900">Problem Statement Slots</h3>
+            <span className="text-xs text-metal-400 font-medium">— fullest first</span>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {taskSlotSummary.map((ps) => (
+              <div
+                key={ps.id}
+                className={cn(
+                  'p-3 rounded-xl border text-xs',
+                  ps.remaining === 0
+                    ? 'bg-red-50 border-red-200'
+                    : ps.remaining <= 1
+                      ? 'bg-amber-50 border-amber-200'
+                      : 'bg-metal-50 border-metal-200'
+                )}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-navy-900">#{ps.id}</span>
+                  <span
+                    className={cn(
+                      'font-bold',
+                      ps.remaining === 0 ? 'text-red-700' : ps.remaining <= 1 ? 'text-amber-700' : 'text-emerald-700'
+                    )}
+                  >
+                    {ps.remaining === 0 ? 'FULL' : `${ps.remaining} left`}
+                  </span>
+                </div>
+                <p className="text-metal-700 font-medium truncate mb-1">{ps.title}</p>
+                <div className="h-1.5 rounded-full bg-white overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full',
+                      ps.remaining === 0 ? 'bg-red-400' : ps.remaining <= 1 ? 'bg-amber-400' : 'bg-emerald-400'
+                    )}
+                    style={{ width: `${Math.min(100, (ps.occupied / MAX_TEAMS_PER_TASK) * 100)}%` }}
+                  />
+                </div>
+                <p className="text-metal-500 mt-1">
+                  {ps.occupied} / {MAX_TEAMS_PER_TASK} teams
+                  {ps.held > 0 && (
+                    <span className="text-blue-600 font-semibold"> ({ps.confirmed} confirmed + {ps.held} reserved)</span>
+                  )}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -234,6 +337,20 @@ export default function AdminDashboardPage() {
             )}
           >
             Jury Submissions ({submissions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('paymentIssues')}
+            className={cn(
+              'pb-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5',
+              activeTab === 'paymentIssues'
+                ? 'border-navy-900 text-navy-900'
+                : paymentIssues.length > 0
+                  ? 'border-transparent text-red-600 hover:text-red-700'
+                  : 'border-transparent text-metal-500 hover:text-metal-800'
+            )}
+          >
+            {paymentIssues.length > 0 && <AlertOctagon className="w-3.5 h-3.5" />}
+            Payment Issues ({paymentIssues.length})
           </button>
         </div>
 
@@ -286,7 +403,7 @@ export default function AdminDashboardPage() {
                     <tr className="bg-metal-100 border-b border-metal-200 text-metal-600 font-bold uppercase tracking-wider">
                       <th className="p-3">ID / Date</th>
                       <th className="p-3">Team &amp; Leader</th>
-                      <th className="p-3">Department</th>
+                      <th className="p-3">College &amp; Mentor</th>
                       <th className="p-3">Task Allocated</th>
                       <th className="p-3">UTR / Payment</th>
                       <th className="p-3">Status</th>
@@ -304,15 +421,13 @@ export default function AdminDashboardPage() {
                           <td className="p-3">
                             <span className="font-bold text-navy-900 block">{reg.teamName}</span>
                             <span className="text-metal-600">{reg.leaderName} ({reg.leaderEmail})</span>
-                            {(reg.member2 || reg.member3) && (
-                              <span className="text-[10px] text-metal-400 block mt-0.5">
-                                Members: {[reg.member2, reg.member3].filter(Boolean).join(', ')}
-                              </span>
-                            )}
+                            <span className="text-[10px] text-metal-400 block mt-0.5">
+                              Members: {[reg.member1Name, reg.member2Name].filter(Boolean).join(', ') || '—'}
+                            </span>
                           </td>
                           <td className="p-3">
-                            <span className="text-metal-700 block font-medium">{reg.department}</span>
-                            <span className="text-[10px] text-metal-500">{reg.year}</span>
+                            <span className="text-metal-700 block font-medium">{reg.collegeName}</span>
+                            <span className="text-[10px] text-metal-500">Mentor: {reg.mentorName}</span>
                           </td>
                           <td className="p-3 max-w-xs">
                             <span className="font-bold text-navy-900 block truncate">#{reg.taskId}: {reg.taskTitle}</span>
@@ -550,6 +665,72 @@ export default function AdminDashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Tab 4: PAYMENT ISSUES (payments verified by Razorpay but the task filled up first) */}
+        {activeTab === 'paymentIssues' && (
+          <div className="space-y-4">
+            {paymentIssues.length === 0 ? (
+              <div className="card p-8 text-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-navy-900">No unresolved payment issues</p>
+                <p className="text-xs text-metal-500 mt-1">
+                  This list only fills up if a payment is verified by Razorpay at the exact moment a task's last slot is taken by someone else.
+                </p>
+              </div>
+            ) : (
+              paymentIssues.map((issue: PaymentIssue) => (
+                <div key={issue.id} className="card p-5 border-l-4 border-red-400 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-navy-900 text-sm">{issue.registration?.teamName}</p>
+                      <p className="text-xs text-metal-600">
+                        {issue.registration?.leaderName} ({issue.registration?.leaderEmail})
+                      </p>
+                    </div>
+                    <span className="badge badge-rejected text-[10px] shrink-0">Needs manual resolution</span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-2 text-xs bg-metal-50 rounded-xl p-3">
+                    <div>
+                      <span className="text-metal-500 block">Razorpay Payment ID:</span>
+                      <span className="font-mono font-semibold text-navy-900">{issue.razorpayPaymentId}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Amount Paid:</span>
+                      <span className="font-bold text-gold-600">₹{issue.totalFee}</span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Task They Tried to Join:</span>
+                      <span className="font-semibold text-navy-900">
+                        #{issue.registration?.taskId}: {issue.registration?.taskTitle}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">College:</span>
+                      <span className="font-semibold text-navy-900">{issue.registration?.collegeName}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-metal-500">
+                    This team paid successfully but the task above had already filled up by the time their payment was confirmed.
+                    Contact them to either reassign to another problem statement (register them manually with this Payment ID as
+                    their transaction reference) or refund via your Razorpay dashboard, then mark this resolved.
+                  </p>
+
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => issue.id && resolveIssue.mutate(issue.id)}
+                      disabled={resolveIssue.isPending || !issue.id}
+                      className="btn-outline text-xs px-3 py-1.5"
+                    >
+                      <Check className="w-3.5 h-3.5" /> Mark Resolved
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
       </div>

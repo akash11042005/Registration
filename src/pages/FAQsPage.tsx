@@ -17,7 +17,7 @@ const FAQS = [
         a: 'No. Once your payment is verified and your slot is confirmed, the task assignment is final and cannot be changed. Choose carefully before submitting.',
       },
       {
-        q: 'What if my preferred task is already full (5 teams)?',
+        q: 'What if my preferred task is already full (8 teams)?',
         a: 'You\'ll need to select a different task. We recommend registering early to secure your preferred problem statement.',
       },
       {
