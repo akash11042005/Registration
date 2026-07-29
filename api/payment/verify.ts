@@ -14,7 +14,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
-import { getAdminDb } from '../_lib/firebaseadmin';
+import { getAdminDb } from '../_lib/firebaseadmin.js';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const MAX_TEAMS_PER_TASK = 8;
@@ -116,7 +116,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ error: 'Could not confirm payment with Razorpay. Please contact the organizers with your payment ID.' });
     }
 
-    const db = getAdminDb();
+    let db: ReturnType<typeof getAdminDb>;
+    try {
+        db = getAdminDb();
+    } catch (err) {
+        console.error('Firebase Admin initialization error:', err);
+        return res.status(500).json({
+            error: 'Payment was verified but the server is not configured correctly. Please contact the organizers with your Payment ID: ' + razorpay_payment_id,
+        });
+    }
     const registrationsRef = db.collection('registrations');
     const taskCountRef = db.collection('taskCounts').doc(String(registration.taskId));
     const holdRef = holdId ? db.collection('slotHolds').doc(holdId) : null;
