@@ -14,7 +14,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
-import { getAdminDb } from '../_lib/firebaseAdmin';
+import { getAdminDb } from '../_lib/firebaseadmin';
 import { FieldValue } from 'firebase-admin/firestore';
 
 const MAX_TEAMS_PER_TASK = 8;
