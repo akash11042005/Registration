@@ -32,7 +32,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Missing taskId or uid' });
     }
 
-    const db = getAdminDb();
+    let db: ReturnType<typeof getAdminDb>;
+    try {
+        db = getAdminDb();
+    } catch (err) {
+        console.error('Firebase Admin initialization error:', err);
+        return res.status(500).json({ error: 'Server is not configured correctly. Please contact the organizers.' });
+    }
     const taskCountRef = db.collection('taskCounts').doc(String(taskId));
     const holdsRef = db.collection('slotHolds');
 
