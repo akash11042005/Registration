@@ -1,11 +1,13 @@
 {
   "name": "project",
+  "overrides": {
+    "jose": "4.15.5"
+  },
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "server": "node server/index.cjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -29,20 +31,15 @@
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
     "@tanstack/react-query": "^5.101.4",
-    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cors": "^2.8.6",
     "date-fns": "^4.4.0",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
     "firebase": "^12.16.0",
     "firebase-admin": "^14.2.0",
     "framer-motion": "^12.42.2",
-    "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.26.0",
-    "multer": "^2.2.0",
     "postprocessing": "^6.39.4",
     "razorpay": "^2.9.8",
     "react": "^19.2.7",
@@ -56,10 +53,6 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/multer": "^2.2.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
