@@ -1,129 +1,142 @@
 // ============================================================
-// Premium 3D hero — a Body-Centered Cubic (BCC) crystal lattice.
+// Premium 3D hero — a molten-gold hourglass rendered as a dense
+// field of glowing "grain" particles (dust-like, not clean geometric
+// spheres), with a continuous bright stream of light poured through
+// the pinched neck to read as liquid gold flowing through it.
 //
-// Geometry: mathematically correct BCC unit cells tiled 2×2×2 —
-// atoms at every cube corner plus one at the center of each cell,
-// connected by rods to their true nearest neighbors (corner ↔
-// body-center, the real BCC bond).
+// Geometry: particles are volumetrically scattered against a
+// parametric hourglass silhouette (radius tapering to a narrow neck
+// at the center, flaring back out top and bottom) — denser near the
+// surface, thinning toward the core, for a "solid but grainy" look
+// rather than a hollow shell or a uniform cloud.
 //
-// Rendering: every atom is a cloud of GPU-animated particles (one
-// combined Points draw call for the whole lattice, not one object
-// per atom) using a custom shader for per-particle drift + sparkle.
-// Rods are real lit meshes (InstancedMesh), so they alone carry
-// genuine PBR specular highlights — points fundamentally can't be
-// "reflective" in the literal sense, so bloom + the lit rods are
-// what stand in for that here.
+// Color: particles near the neck read hot (white/gold), cooling
+// toward amber/bronze further from center — like embers cooling as
+// they scatter outward, reinforcing "molten gold pouring through."
 //
-// Interaction: continuous slow rotation, mouse-driven tilt with
-// damped inertia (eases back to rest when the pointer leaves),
-// subtle scroll-linked rotation, and a very slight breathing scale.
+// The pour stream is a second, separate particle system: a thin,
+// bright column confined to the central axis, continuously falling
+// and looping in the vertex shader, independent of the wider body.
+//
+// A faint wireframe rim (top ring, neck ring, bottom ring + tapering
+// guide lines) anchors the eye so the shape reads immediately as "an
+// hourglass," the same role the outer cube wireframe played before.
+//
+// Interaction, perf tuning, and rendering setup (mouse-swirl shader,
+// mobile particle/DPR/bloom scaling, OrbitControls-skip-on-touch,
+// prefers-reduced-motion) are carried over unchanged from the
+// previous crystal-lattice hero — all already tuned and tested.
 // ============================================================
-import React, { useMemo, useRef, useLayoutEffect } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Stars, OrbitControls } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
-// Vivid, distinct per-atom colors — same spirit as the grain-boundary
-// model, so adjacent atoms read as clearly different, not monochrome.
-const PALETTE = [
-    '#facc15', // gold
-    '#d4a017', // amber
-    '#fff6d6', // warm white
-    '#60a5fa', // sky blue
-    '#7d8fe8', // periwinkle
-    '#34d399', // emerald
-    '#f472b6', // rose
-    '#a78bfa', // violet
-    '#ffffff', // white highlight
-].map((c) => new THREE.Color(c));
-
-const CELL = 2.2; // BCC unit-cell edge length
-const ATOM_RADIUS = 0.34;
-
 // Perf/UX guard: phones and tablets get fewer particles, a lower device-pixel-
 // ratio cap, and no OrbitControls (which otherwise captures one-finger touch-
 // drag and hijacks page scrolling instead of letting the page scroll normally).
-// prefers-reduced-motion also disables the continuous rotation for anyone who
+// prefers-reduced-motion also disables continuous rotation/flow for anyone who
 // has that accessibility setting on. Computed once at module load — this is a
 // hero background, not something that needs to react to live resizing.
 const IS_COARSE_POINTER = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 const PREFERS_REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-const PARTICLES_PER_ATOM = IS_COARSE_POINTER ? 220 : 480;
+const GRAIN_COUNT = IS_COARSE_POINTER ? 9000 : 19000;
+const STREAM_COUNT = IS_COARSE_POINTER ? 800 : 2000;
 const MAX_DPR = IS_COARSE_POINTER ? 1 : 2;
 
-interface Atom {
-    position: THREE.Vector3;
-    color: THREE.Color;
+// Hourglass silhouette shape.
+const HALF_HEIGHT = 3.4;
+const MAX_RADIUS = 1.75;
+const NECK_RADIUS = 0.16;
+const TAPER_POWER = 1.7; // higher = sharper pinch at the neck
+
+function radiusAt(yNorm: number): number {
+    const t = Math.abs(yNorm); // 0 at neck, 1 at top/bottom
+    return NECK_RADIUS + (MAX_RADIUS - NECK_RADIUS) * Math.pow(t, TAPER_POWER);
 }
 
-// Builds one 2×2×2 BCC supercell: 27 shared corner atoms (a 3×3×3
-// grid of lattice points) + 8 body-center atoms, one per unit cell.
-function useBCCLattice() {
+// Ember-cooling gradient: hot white-gold right at the neck, cooling
+// through amber to a darker bronze further out.
+const HOT = new THREE.Color('#fff3c4');
+const CORE = new THREE.Color('#ffb703');
+const MID = new THREE.Color('#fb8500');
+const COOL = new THREE.Color('#7a4a10');
+
+function colorForY(yNorm: number, jitter: number): THREE.Color {
+    const t = Math.min(1, Math.abs(yNorm) * 1.35);
+    let c: THREE.Color;
+    if (t < 0.33) c = HOT.clone().lerp(CORE, t / 0.33);
+    else if (t < 0.7) c = CORE.clone().lerp(MID, (t - 0.33) / 0.37);
+    else c = MID.clone().lerp(COOL, (t - 0.7) / 0.3);
+    return c.lerp(new THREE.Color('#ffffff'), jitter * 0.1);
+}
+
+function useGrainGeometry() {
     return useMemo(() => {
-        const atoms: Atom[] = [];
-        const half = CELL;
-        const coords = [-half, 0, half];
+        const positions = new Float32Array(GRAIN_COUNT * 3);
+        const colors = new Float32Array(GRAIN_COUNT * 3);
+        const seeds = new Float32Array(GRAIN_COUNT);
 
-        // Corner atoms — every lattice point in the 3×3×3 grid.
-        for (const x of coords) {
-            for (const y of coords) {
-                for (const z of coords) {
-                    atoms.push({
-                        position: new THREE.Vector3(x, y, z),
-                        color: PALETTE[Math.floor(Math.random() * PALETTE.length)],
-                    });
-                }
-            }
+        for (let i = 0; i < GRAIN_COUNT; i++) {
+            // Bias sampling toward the neck (pow < 1 pulls values toward 0)
+            // so the pinch reads as denser/brighter, matching where the
+            // "pour" visually originates.
+            const sign = Math.random() < 0.5 ? -1 : 1;
+            const yNorm = sign * Math.pow(Math.random(), 1.6);
+            const y = yNorm * HALF_HEIGHT;
+            const surfaceR = radiusAt(yNorm);
+            // Denser near the surface, thinning toward the core — gives a
+            // solid-but-grainy volumetric fill rather than a hollow shell.
+            const r = surfaceR * (0.5 + 0.5 * Math.cbrt(Math.random()));
+            const theta = Math.random() * Math.PI * 2;
+
+            positions[i * 3] = r * Math.cos(theta);
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = r * Math.sin(theta);
+
+            const jitter = Math.random();
+            const c = colorForY(yNorm, jitter);
+            colors[i * 3] = c.r;
+            colors[i * 3 + 1] = c.g;
+            colors[i * 3 + 2] = c.b;
+
+            seeds[i] = Math.random();
         }
 
-        // Body-center atoms — one per unit cell, at (±half/2, ±half/2, ±half/2).
-        const bodyCenters: THREE.Vector3[] = [];
-        const half2 = half / 2;
-        for (const sx of [-1, 1]) {
-            for (const sy of [-1, 1]) {
-                for (const sz of [-1, 1]) {
-                    const p = new THREE.Vector3(sx * half2, sy * half2, sz * half2);
-                    bodyCenters.push(p);
-                    atoms.push({ position: p, color: PALETTE[Math.floor(Math.random() * PALETTE.length)] });
-                }
-            }
-        }
-
-        // Bonds — the true BCC nearest-neighbor bond: each body-center atom
-        // connects to the 8 corners of its own enclosing unit cell.
-        const bonds: [THREE.Vector3, THREE.Vector3][] = [];
-        for (const bc of bodyCenters) {
-            for (const dx of [-1, 1]) {
-                for (const dy of [-1, 1]) {
-                    for (const dz of [-1, 1]) {
-                        const corner = new THREE.Vector3(
-                            bc.x + (dx * half) / 2,
-                            bc.y + (dy * half) / 2,
-                            bc.z + (dz * half) / 2
-                        );
-                        bonds.push([bc, corner]);
-                    }
-                }
-            }
-        }
-
-        return { atoms, bonds };
+        return { positions, colors, seeds };
     }, []);
 }
 
-function sampleInAtom(center: THREE.Vector3, radius: number): THREE.Vector3 {
-    const r = radius * Math.cbrt(Math.random()) * (0.5 + 0.5 * Math.random());
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    return new THREE.Vector3(
-        center.x + r * Math.sin(phi) * Math.cos(theta),
-        center.y + r * Math.sin(phi) * Math.sin(theta),
-        center.z + r * Math.cos(phi)
-    );
+function useStreamGeometry() {
+    return useMemo(() => {
+        const positions = new Float32Array(STREAM_COUNT * 3);
+        const colors = new Float32Array(STREAM_COUNT * 3);
+        const seeds = new Float32Array(STREAM_COUNT);
+        const streamRadius = NECK_RADIUS * 0.55;
+
+        for (let i = 0; i < STREAM_COUNT; i++) {
+            const y = (Math.random() * 2 - 1) * HALF_HEIGHT;
+            const r = streamRadius * Math.sqrt(Math.random());
+            const theta = Math.random() * Math.PI * 2;
+
+            positions[i * 3] = r * Math.cos(theta);
+            positions[i * 3 + 1] = y;
+            positions[i * 3 + 2] = r * Math.sin(theta);
+
+            const c = HOT.clone().lerp(CORE, Math.random() * 0.5);
+            colors[i * 3] = c.r;
+            colors[i * 3 + 1] = c.g;
+            colors[i * 3 + 2] = c.b;
+
+            seeds[i] = Math.random();
+        }
+
+        return { positions, colors, seeds };
+    }, []);
 }
 
-const VERTEX_SHADER = /* glsl */ `
+const GRAIN_VERTEX_SHADER = /* glsl */ `
   attribute vec3 color;
   attribute float aSeed;
   uniform float uTime;
@@ -137,16 +150,13 @@ const VERTEX_SHADER = /* glsl */ `
     vColor = color;
     vec3 pos = position;
 
-    // Tiny ambient GPU-driven per-particle drift — always present, independent of the cursor.
+    // Tiny ambient per-particle drift — always present, independent of the cursor.
     float phase = aSeed * 6.2831853;
-    pos.x += sin(uTime * 0.55 + phase) * 0.01;
-    pos.y += cos(uTime * 0.47 + phase * 1.3) * 0.01;
-    pos.z += sin(uTime * 0.39 + phase * 0.8) * 0.01;
+    pos.x += sin(uTime * 0.5 + phase) * 0.012;
+    pos.y += cos(uTime * 0.43 + phase * 1.3) * 0.012;
+    pos.z += sin(uTime * 0.37 + phase * 0.8) * 0.012;
 
-    // Fluid-like swirl following the cursor's projected 3D position — a tangential
-    // rotation plus slight outward push, both falling off with distance and scaled
-    // by uMouseActive (ramps toward 1 while the pointer is over the canvas, eases
-    // back toward 0 when it isn't — this is what makes particles "slowly return").
+    // Fluid-like swirl following the cursor's projected 3D position.
     vec3 toMouse = pos - uMouse3D;
     float dist = length(toMouse) + 0.0001;
     float influenceRadius = 2.0;
@@ -158,15 +168,15 @@ const VERTEX_SHADER = /* glsl */ `
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
 
-    // Subtle per-particle sparkle via a slow, phase-shifted brightness pulse.
-    vAlpha = 0.78 + 0.22 * sin(uTime * 1.4 + phase * 3.1);
+    // Grain sparkle — slow, phase-shifted brightness pulse per particle.
+    vAlpha = 0.75 + 0.25 * sin(uTime * 1.3 + phase * 3.1);
 
-    gl_PointSize = uPixelRatio * (18.0 / -mvPosition.z);
+    gl_PointSize = uPixelRatio * (13.0 / -mvPosition.z);
     gl_Position = projectionMatrix * mvPosition;
   }
 `;
 
-const FRAGMENT_SHADER = /* glsl */ `
+const GRAIN_FRAGMENT_SHADER = /* glsl */ `
   varying vec3 vColor;
   varying float vAlpha;
 
@@ -179,43 +189,42 @@ const FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-function useParticleGeometry(atoms: Atom[]) {
-    return useMemo(() => {
-        const total = atoms.length * PARTICLES_PER_ATOM;
-        const positions = new Float32Array(total * 3);
-        const colors = new Float32Array(total * 3);
-        const seeds = new Float32Array(total);
+// Stream particles fall continuously through the neck and loop back to
+// the top — aSeed offsets each particle's phase so the flow reads as
+// continuous, not a single wave of particles moving in lockstep.
+const STREAM_VERTEX_SHADER = /* glsl */ `
+  attribute vec3 color;
+  attribute float aSeed;
+  uniform float uTime;
+  uniform float uPixelRatio;
+  uniform float uFlowSpeed;
+  varying vec3 vColor;
+  varying float vAlpha;
 
-        let i = 0;
-        for (const atom of atoms) {
-            for (let s = 0; s < PARTICLES_PER_ATOM; s++, i++) {
-                const p = sampleInAtom(atom.position, ATOM_RADIUS);
-                positions[i * 3] = p.x;
-                positions[i * 3 + 1] = p.y;
-                positions[i * 3 + 2] = p.z;
+  void main() {
+    vColor = color;
+    vec3 pos = position;
 
-                const shade = atom.color.clone().lerp(new THREE.Color('#ffffff'), Math.random() * 0.25);
-                colors[i * 3] = shade.r;
-                colors[i * 3 + 1] = shade.g;
-                colors[i * 3 + 2] = shade.b;
+    float span = ${(HALF_HEIGHT * 2).toFixed(2)};
+    float half = ${HALF_HEIGHT.toFixed(2)};
+    float rawY = pos.y - uTime * uFlowSpeed + aSeed * span;
+    pos.y = mod(rawY + half, span) - half;
 
-                seeds[i] = Math.random();
-            }
-        }
-        return { positions, colors, seeds };
-    }, [atoms]);
-}
+    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+    vAlpha = 0.85 + 0.15 * sin(uTime * 2.4 + aSeed * 6.2831853);
+    gl_PointSize = uPixelRatio * (9.0 / -mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
 
-function LatticeParticles({
-    atoms,
+function GrainBody({
     mouseWorldRef,
     mouseActiveRef,
 }: {
-    atoms: Atom[];
     mouseWorldRef: React.MutableRefObject<THREE.Vector3>;
     mouseActiveRef: React.MutableRefObject<number>;
 }) {
-    const { positions, colors, seeds } = useParticleGeometry(atoms);
+    const { positions, colors, seeds } = useGrainGeometry();
     const materialRef = useRef<THREE.ShaderMaterial>(null);
     const pointsRef = useRef<THREE.Points>(null);
     const { gl } = useThree();
@@ -251,8 +260,8 @@ function LatticeParticles({
             <shaderMaterial
                 ref={materialRef}
                 uniforms={uniforms}
-                vertexShader={VERTEX_SHADER}
-                fragmentShader={FRAGMENT_SHADER}
+                vertexShader={GRAIN_VERTEX_SHADER}
+                fragmentShader={GRAIN_FRAGMENT_SHADER}
                 transparent
                 depthWrite={false}
                 blending={THREE.AdditiveBlending}
@@ -261,53 +270,100 @@ function LatticeParticles({
     );
 }
 
-// Bonds as real, lit meshes — the one part of the scene where genuine
-// specular highlights are physically meaningful.
-function LatticeBonds({ bonds }: { bonds: [THREE.Vector3, THREE.Vector3][] }) {
-    const meshRef = useRef<THREE.InstancedMesh>(null);
-    const radius = 0.02;
+function PourStream() {
+    const { positions, colors, seeds } = useStreamGeometry();
+    const materialRef = useRef<THREE.ShaderMaterial>(null);
 
-    useLayoutEffect(() => {
-        if (!meshRef.current) return;
-        const dummy = new THREE.Object3D();
-        bonds.forEach(([a, b], i) => {
-            const mid = a.clone().add(b).multiplyScalar(0.5);
-            const dir = b.clone().sub(a);
-            const length = dir.length();
-            dummy.position.copy(mid);
-            dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
-            dummy.scale.set(1, length, 1);
-            dummy.updateMatrix();
-            meshRef.current!.setMatrixAt(i, dummy.matrix);
-        });
-        meshRef.current.instanceMatrix.needsUpdate = true;
-    }, [bonds]);
+    const uniforms = useMemo(
+        () => ({
+            uTime: { value: 0 },
+            uPixelRatio: { value: typeof window !== 'undefined' ? Math.min(window.devicePixelRatio, MAX_DPR) : 1 },
+            uFlowSpeed: { value: PREFERS_REDUCED_MOTION ? 0 : 1.6 },
+        }),
+        []
+    );
+
+    useFrame((state) => {
+        if (materialRef.current) {
+            materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+        }
+    });
 
     return (
-        <instancedMesh ref={meshRef} args={[undefined, undefined, bonds.length]}>
-            <cylinderGeometry args={[radius, radius, 1, 8]} />
-            <meshStandardMaterial color="#b7bcc4" metalness={0.85} roughness={0.32} />
-        </instancedMesh>
+        <points>
+            <bufferGeometry>
+                <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+                <bufferAttribute attach="attributes-color" args={[colors, 3]} />
+                <bufferAttribute attach="attributes-aSeed" args={[seeds, 1]} />
+            </bufferGeometry>
+            <shaderMaterial
+                ref={materialRef}
+                uniforms={uniforms}
+                vertexShader={STREAM_VERTEX_SHADER}
+                fragmentShader={GRAIN_FRAGMENT_SHADER}
+                transparent
+                depthWrite={false}
+                blending={THREE.AdditiveBlending}
+            />
+        </points>
     );
 }
 
-// Faint outer cube wireframe — anchors the eye so the whole structure
-// reads immediately as "a cube," distinct from the internal BCC bonds.
-function OuterCubeWireframe() {
-    const geometry = useMemo(() => {
-        const box = new THREE.BoxGeometry(CELL * 2, CELL * 2, CELL * 2);
-        return new THREE.EdgesGeometry(box);
+// Faint wireframe rim — top ring, neck ring, bottom ring, plus tapering
+// guide lines — so the shape reads immediately as "an hourglass," the
+// same anchoring role the outer cube wireframe played in the crystal
+// lattice version.
+function HourglassRim() {
+    const { ringTop, ringNeck, ringBottom, guideLines } = useMemo(() => {
+        const ring = (yNorm: number) => {
+            const y = yNorm * HALF_HEIGHT;
+            const r = radiusAt(yNorm);
+            const pts: THREE.Vector3[] = [];
+            const segments = 64;
+            for (let i = 0; i <= segments; i++) {
+                const a = (i / segments) * Math.PI * 2;
+                pts.push(new THREE.Vector3(r * Math.cos(a), y, r * Math.sin(a)));
+            }
+            return new THREE.BufferGeometry().setFromPoints(pts);
+        };
+
+        const guideMaterial = new THREE.LineBasicMaterial({ color: '#ffd166', transparent: true, opacity: 0.22 });
+        const guideLines: THREE.Line[] = [];
+        const angles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+        const steps = 40;
+        for (const a of angles) {
+            const pts: THREE.Vector3[] = [];
+            for (let i = 0; i <= steps; i++) {
+                const yNorm = -1 + (2 * i) / steps;
+                const r = radiusAt(yNorm);
+                pts.push(new THREE.Vector3(r * Math.cos(a), yNorm * HALF_HEIGHT, r * Math.sin(a)));
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(pts);
+            guideLines.push(new THREE.Line(geometry, guideMaterial));
+        }
+
+        return { ringTop: ring(1), ringNeck: ring(0.02), ringBottom: ring(-1), guideLines };
     }, []);
 
     return (
-        <lineSegments geometry={geometry}>
-            <lineBasicMaterial color="#c9d3ff" transparent opacity={0.45} />
-        </lineSegments>
+        <>
+            <lineLoop geometry={ringTop}>
+                <lineBasicMaterial color="#ffd166" transparent opacity={0.35} />
+            </lineLoop>
+            <lineLoop geometry={ringNeck}>
+                <lineBasicMaterial color="#fff3c4" transparent opacity={0.55} />
+            </lineLoop>
+            <lineLoop geometry={ringBottom}>
+                <lineBasicMaterial color="#ffd166" transparent opacity={0.35} />
+            </lineLoop>
+            {guideLines.map((lineObj, i) => (
+                <primitive key={i} object={lineObj} />
+            ))}
+        </>
     );
 }
 
-function Lattice({ hoveringRef }: { hoveringRef: React.MutableRefObject<boolean> }) {
-    const { atoms, bonds } = useBCCLattice();
+function Hourglass({ hoveringRef }: { hoveringRef: React.MutableRefObject<boolean> }) {
     const spinRef = useRef<THREE.Group>(null);
     const scrollFactor = useRef(0);
     const mouseWorldRef = useRef(new THREE.Vector3(9999, 9999, 9999));
@@ -324,7 +380,7 @@ function Lattice({ hoveringRef }: { hoveringRef: React.MutableRefObject<boolean>
 
     useFrame((state, delta) => {
         if (spinRef.current && !PREFERS_REDUCED_MOTION) {
-            spinRef.current.rotation.y += delta * 0.1;
+            spinRef.current.rotation.y += delta * 0.09;
             spinRef.current.rotation.y += scrollFactor.current * delta * 0.06;
             const breathe = 1 + Math.sin(state.clock.elapsedTime * 0.5) * 0.015;
             spinRef.current.scale.setScalar(breathe);
@@ -336,20 +392,20 @@ function Lattice({ hoveringRef }: { hoveringRef: React.MutableRefObject<boolean>
             if (state.raycaster.ray.intersectPlane(interactionPlane, hit)) {
                 mouseWorldRef.current.copy(hit);
             }
-            // Ramps up quickly while hovering...
             mouseActiveRef.current += (1 - mouseActiveRef.current) * Math.min(1, delta * 3.5);
         } else {
-            // ...and eases back down slowly once the pointer leaves — the
-            // "slowly return to original shape" behavior.
             mouseActiveRef.current += (0 - mouseActiveRef.current) * Math.min(1, delta * 1.2);
         }
     });
 
     return (
-        <group ref={spinRef} rotation={[0.3, 0.5, 0]}>
-            <OuterCubeWireframe />
-            <LatticeBonds bonds={bonds} />
-            <LatticeParticles atoms={atoms} mouseWorldRef={mouseWorldRef} mouseActiveRef={mouseActiveRef} />
+        <group ref={spinRef} rotation={[0.15, 0.4, 0]}>
+            <HourglassRim />
+            <GrainBody mouseWorldRef={mouseWorldRef} mouseActiveRef={mouseActiveRef} />
+            <PourStream />
+            {/* Warm point light right at the neck reinforces the "molten
+                glow at the pinch" with real lighting, on top of bloom. */}
+            <pointLight position={[0, 0, 0]} color="#ffb703" intensity={2.2} distance={3} decay={2} />
         </group>
     );
 }
@@ -369,10 +425,10 @@ export default function HeroCrystalLattice() {
                 gl={{ antialias: !IS_COARSE_POINTER, alpha: true, powerPreference: 'high-performance' }}
             >
                 <Stars radius={40} depth={25} count={350} factor={1} saturation={0} fade speed={0.2} />
-                <ambientLight intensity={0.35} />
-                <directionalLight position={[4, 5, 6]} intensity={0.7} color="#eef2ff" />
-                <directionalLight position={[-5, -3, -4]} intensity={0.25} color="#aab8d6" />
-                <Lattice hoveringRef={hoveringRef} />
+                <ambientLight intensity={0.3} />
+                <directionalLight position={[4, 5, 6]} intensity={0.6} color="#eef2ff" />
+                <directionalLight position={[-5, -3, -4]} intensity={0.2} color="#aab8d6" />
+                <Hourglass hoveringRef={hoveringRef} />
                 {/* Skipped entirely on touch devices — OrbitControls captures
                     one-finger drag for rotate, which otherwise hijacks the
                     page's normal scroll gesture the moment a finger lands on
@@ -390,11 +446,11 @@ export default function HeroCrystalLattice() {
                 )}
                 <EffectComposer>
                     <Bloom
-                        intensity={IS_COARSE_POINTER ? 0.2 : 0.32}
-                        luminanceThreshold={0.5}
+                        intensity={IS_COARSE_POINTER ? 0.35 : 0.55}
+                        luminanceThreshold={0.35}
                         luminanceSmoothing={0.4}
                         mipmapBlur={!IS_COARSE_POINTER}
-                        radius={0.4}
+                        radius={0.5}
                     />
                     <Vignette darkness={0.6} offset={0.3} />
                 </EffectComposer>
