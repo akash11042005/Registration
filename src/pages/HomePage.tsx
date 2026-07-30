@@ -149,27 +149,22 @@ function HeroConceptComposition() {
       fill="none"
       aria-hidden="true"
     >
-      <defs>
-        <filter id="heroSoftBlur" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="0.7" />
-        </filter>
-      </defs>
 
       {/* Connecting lines — drawn first, underneath the illustrations.
           BCC lattice <-> grain boundary is a real connection; the other
           two are left dangling, terminating in a small open ring rather
           than reaching another element. */}
       <g stroke="#ffd166" strokeWidth="0.6">
-        <line x1="130" y1="168" x2="330" y2="118" opacity="0.12" />
-        <line x1="470" y1="130" x2="588" y2="128" opacity="0.12" />
-        <line x1="100" y1="455" x2="185" y2="400" opacity="0.08" filter="url(#heroSoftBlur)" />
-        <circle cx="185" cy="400" r="2" opacity="0.1" fill="none" />
-        <line x1="565" y1="480" x2="480" y2="430" opacity="0.08" filter="url(#heroSoftBlur)" />
-        <circle cx="480" cy="430" r="2" opacity="0.1" fill="none" />
+        <line x1="130" y1="168" x2="330" y2="118" opacity="0.35" />
+        <line x1="470" y1="130" x2="588" y2="128" opacity="0.35" />
+        <line x1="100" y1="455" x2="185" y2="400" opacity="0.28" />
+        <circle cx="185" cy="400" r="2" opacity="0.32" fill="none" />
+        <line x1="565" y1="480" x2="480" y2="430" opacity="0.28" />
+        <circle cx="480" cy="430" r="2" opacity="0.32" fill="none" />
       </g>
 
       {/* Iron-Carbon phase diagram — bottom-left, farther out */}
-      <g transform="translate(95,470)" stroke="#ffd166" strokeWidth="0.9" opacity="0.08" filter="url(#heroSoftBlur)">
+      <g transform="translate(95,470)" stroke="#ffd166" strokeWidth="1.2" opacity="0.28">
         <line x1="-24" y1="24" x2="-24" y2="-22" />
         <line x1="-24" y1="24" x2="26" y2="24" />
         <line x1="-27" y1="18" x2="-24" y2="18" />
@@ -179,7 +174,7 @@ function HeroConceptComposition() {
       </g>
 
       {/* BCC crystal lattice — top-left, medium distance */}
-      <g transform="translate(120,150)" stroke="#ffd166" strokeWidth="0.85" opacity="0.11">
+      <g transform="translate(120,150)" stroke="#ffd166" strokeWidth="1.2" opacity="0.4">
         <polygon points="-18,-11 9,-18 27,-5 0,2" fill="none" />
         <polygon points="-18,11 9,4 27,17 0,24" fill="none" />
         <line x1="-18" y1="-11" x2="-18" y2="11" />
@@ -194,7 +189,7 @@ function HeroConceptComposition() {
       </g>
 
       {/* Grain boundary sketch — top-right, closer, slightly stronger opacity */}
-      <g transform="translate(340,105)" stroke="#ffd166" strokeWidth="0.85" opacity="0.15">
+      <g transform="translate(340,105)" stroke="#ffd166" strokeWidth="1.3" opacity="0.48">
         <path d="M -22 -4 L -4 -18 L 16 -12 L 24 6 L 8 20 L -14 16 Z" fill="none" />
         <path d="M -4 -18 L 6 -2 L 24 6" fill="none" />
         <path d="M 6 -2 L -14 16" fill="none" />
@@ -202,7 +197,7 @@ function HeroConceptComposition() {
       </g>
 
       {/* Atomic bonds — molecular structure, right, closest/strongest */}
-      <g transform="translate(600,132)" stroke="#ffd166" strokeWidth="0.9" opacity="0.15">
+      <g transform="translate(600,132)" stroke="#ffd166" strokeWidth="1.3" opacity="0.48">
         <polygon points="0,-12 10,-6 10,6 0,12 -10,6 -10,-6" fill="none" />
         <line x1="10" y1="-6" x2="24" y2="-12" />
         <line x1="10" y1="6" x2="24" y2="10" />
@@ -217,7 +212,7 @@ function HeroConceptComposition() {
       </g>
 
       {/* Diffusion path / microstructure sketch — bottom-right, farther out */}
-      <g transform="translate(555,455)" stroke="#ffd166" strokeWidth="0.85" opacity="0.08" filter="url(#heroSoftBlur)">
+      <g transform="translate(555,455)" stroke="#ffd166" strokeWidth="1.2" opacity="0.28">
         <path d="M -22 18 Q -4 -4 20 -16" fill="none" strokeDasharray="2 2.5" />
         <polygon points="20,-16 12,-14 16,-9" fill="#ffd166" stroke="none" />
         <line x1="-14" y1="10" x2="-9" y2="4" strokeWidth="0.5" />
