@@ -122,18 +122,6 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     cap: 8,
   },
   {
-    id: 9,
-    title: 'Retained Austenite Detection',
-    category: 'Metallography',
-    difficulty: 'Advanced',
-    objective: 'Detect and quantify retained austenite in high-carbon steel after incomplete martensitic transformation using point counting and sub-zero treatment.',
-    objectiveFull: 'Participants will characterize the microstructure of supplied high-carbon (or high-alloy tool) steel specimens in the as-quenched condition containing significant retained austenite. Quantification will be performed by point-count stereology per ASTM E562 on etched metallographic sections observed under optical microscope. The effect of sub-zero (cryogenic) treatment on retained austenite content will be evaluated by comparing before/after point-count results and hardness values.',
-    labEquipment: ['Optical microscope with point counter (eyepiece grid or digital overlay)', 'Sub-zero treatment bath (dry ice + acetone, or liquid nitrogen dewar)', 'Metallography preparation station', 'Rockwell / Vickers hardness tester', 'High-carbon tool steel specimens'],
-    evaluationCriteria: 'Statistical rigor of point-count measurement (minimum field count per ASTM E562); correct sample preparation and etching for austenite/martensite contrast; quantification of retained austenite reduction after sub-zero treatment; correlation with hardness changes; uncertainty analysis; quality of microstructural photography and annotation.',
-    tags: ['Retained Austenite', 'Martensite', 'Point Counting', 'ASTM E562', 'Cryogenic Treatment', 'High-Carbon Steel', 'Stereology'],
-    cap: 8,
-  },
-  {
     id: 10,
     title: 'Overheating & Grain Coarsening',
     category: 'Phase Transformations',
