@@ -43,7 +43,7 @@ const IS_COARSE_POINTER = typeof window !== 'undefined' && window.matchMedia?.('
 const PREFERS_REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 // Denser than the earlier version, and a larger point size below, so the
 // specimen reads as filled rather than showing gaps of empty background.
-const GRAIN_COUNT = IS_COARSE_POINTER ? 16000 : 34000;
+const GRAIN_COUNT = IS_COARSE_POINTER ? 18000 : 38000;
 const MAX_DPR = IS_COARSE_POINTER ? 1 : 2;
 
 // Tensile specimen (dog-bone) silhouette shape.
@@ -153,7 +153,7 @@ const GRAIN_VERTEX_SHADER = /* glsl */ `
     // Grain sparkle — slow, phase-shifted brightness pulse per particle.
     vAlpha = 0.75 + 0.25 * sin(uTime * 1.3 + phase * 3.1);
 
-    gl_PointSize = uPixelRatio * (17.0 / -mvPosition.z);
+    gl_PointSize = uPixelRatio * (20.0 / -mvPosition.z);
     gl_Position = projectionMatrix * mvPosition;
   }
 `;
@@ -166,7 +166,7 @@ const GRAIN_FRAGMENT_SHADER = /* glsl */ `
     vec2 uv = gl_PointCoord - vec2(0.5);
     float d = length(uv);
     if (d > 0.5) discard;
-    float alpha = smoothstep(0.5, 0.0, d) * vAlpha;
+    float alpha = smoothstep(0.5, 0.22, d) * vAlpha;
     gl_FragColor = vec4(vColor, alpha);
   }
 `;
@@ -265,7 +265,7 @@ function TensileSpecimen({ hoveringRef }: { hoveringRef: React.MutableRefObject<
             {/* Warm point light in the gauge section reinforces the
                 "stress/heat concentration" glow with real lighting, on
                 top of bloom. */}
-            <pointLight position={[0, 0, 0]} color="#ffb703" intensity={2.2} distance={3} decay={2} />
+            <pointLight position={[0, 0, 0]} color="#ffb703" intensity={2.9} distance={3} decay={2} />
         </group>
     );
 }
@@ -306,7 +306,7 @@ export default function HeroCrystalLattice() {
                 )}
                 <EffectComposer>
                     <Bloom
-                        intensity={IS_COARSE_POINTER ? 0.35 : 0.55}
+                        intensity={IS_COARSE_POINTER ? 0.38 : 0.6}
                         luminanceThreshold={0.35}
                         luminanceSmoothing={0.4}
                         mipmapBlur={!IS_COARSE_POINTER}

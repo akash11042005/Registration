@@ -109,18 +109,18 @@ const staggerItem = {
 // ─────────────────────────────────────────────────
 function LatticeSVG() {
   return (
-    <svg className="absolute inset-0 w-full h-full opacity-[0.06]" aria-hidden="true">
+    <svg className="absolute inset-0 w-full h-full opacity-[0.09]" aria-hidden="true">
       <defs>
-        <pattern id="lattice" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
-          <circle cx="30" cy="30" r="2" fill="white" />
-          <circle cx="0" cy="0" r="2" fill="white" />
-          <circle cx="60" cy="0" r="2" fill="white" />
-          <circle cx="0" cy="60" r="2" fill="white" />
-          <circle cx="60" cy="60" r="2" fill="white" />
-          <line x1="0" y1="0" x2="60" y2="60" stroke="white" strokeWidth="0.5" />
-          <line x1="60" y1="0" x2="0" y2="60" stroke="white" strokeWidth="0.5" />
-          <line x1="30" y1="0" x2="30" y2="60" stroke="white" strokeWidth="0.3" />
-          <line x1="0" y1="30" x2="60" y2="30" stroke="white" strokeWidth="0.3" />
+        <pattern id="lattice" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
+          <circle cx="40" cy="40" r="2.4" fill="white" />
+          <circle cx="0" cy="0" r="2.4" fill="white" />
+          <circle cx="80" cy="0" r="2.4" fill="white" />
+          <circle cx="0" cy="80" r="2.4" fill="white" />
+          <circle cx="80" cy="80" r="2.4" fill="white" />
+          <line x1="0" y1="0" x2="80" y2="80" stroke="white" strokeWidth="0.5" />
+          <line x1="80" y1="0" x2="0" y2="80" stroke="white" strokeWidth="0.5" />
+          <line x1="40" y1="0" x2="40" y2="80" stroke="white" strokeWidth="0.3" />
+          <line x1="0" y1="40" x2="80" y2="40" stroke="white" strokeWidth="0.3" />
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill="url(#lattice)" />
@@ -129,87 +129,55 @@ function LatticeSVG() {
 }
 
 // ─────────────────────────────────────────────────
-// Decorative concept network — small metallurgy-concept icons
-// (grain boundaries, crystal lattices, phase diagrams, diffusion
-// paths, atomic bonds, microstructures) connected to the center by
-// thin gold lines, echoing the event poster's layout around the
-// hourglass artwork. Purely decorative background texture behind
-// the 3D specimen — sits at low opacity so it never competes with
-// the glowing model itself.
+// Decorative metallurgy illustrations — a handful of small, thin-
+// stroke line drawings (phase diagram, crystal lattice, grain
+// boundary, atomic bonds) placed around the tensile specimen at very
+// low opacity. Deliberately minimal and unconnected — no network
+// mesh, no dots-and-lines linking everything together — so the hero
+// stays clean and keeps its negative space rather than reading as
+// cluttered background decoration.
 // ─────────────────────────────────────────────────
-function HeroConceptNetwork() {
-  const CENTER = { x: 350, y: 300 };
-  const nodes = [
-    { x: 90, y: 110 },   // grain boundaries — top-left
-    { x: 70, y: 320 },   // crystal lattices — left
-    { x: 130, y: 500 },  // phase diagrams — bottom-left
-    { x: 610, y: 130 },  // diffusion paths — top-right
-    { x: 630, y: 340 },  // atomic bonds — right
-    { x: 570, y: 500 },  // microstructures — bottom-right
-  ];
-
+function HeroConceptIllustrations() {
   return (
     <svg
-      className="absolute inset-0 w-full h-full pointer-events-none opacity-40 hidden sm:block"
+      className="absolute inset-0 w-full h-full pointer-events-none opacity-10 hidden sm:block"
       viewBox="0 0 700 600"
       fill="none"
       aria-hidden="true"
     >
-      {/* Lines connecting each concept node to the center, and lightly to its neighbors */}
-      {nodes.map((n, i) => (
-        <line key={i} x1={n.x} y1={n.y} x2={CENTER.x} y2={CENTER.y} stroke="#ffd166" strokeWidth="0.75" opacity="0.5" />
-      ))}
-      {nodes.map((n, i) => {
-        const next = nodes[(i + 1) % nodes.length];
-        return <line key={`ring-${i}`} x1={n.x} y1={n.y} x2={next.x} y2={next.y} stroke="#ffd166" strokeWidth="0.5" opacity="0.25" />;
-      })}
-      {nodes.map((n, i) => (
-        <circle key={`dot-${i}`} cx={n.x} cy={n.y} r="2.5" fill="#ffd166" opacity="0.7" />
-      ))}
-
-      {/* Grain boundaries — hexagon, top-left */}
-      <g transform="translate(90,110)" stroke="#ffd166" strokeWidth="1.4" opacity="0.85">
-        <polygon points="0,-22 19,-11 19,11 0,22 -19,11 -19,-11" fill="none" />
+      {/* Iron-Carbon phase diagram — bottom-left */}
+      <g transform="translate(110,500)" stroke="#ffd166" strokeWidth="1.1">
+        <line x1="-22" y1="20" x2="-22" y2="-20" />
+        <line x1="-22" y1="20" x2="22" y2="20" />
+        <path d="M -22 4 Q 0 -22 22 -6" fill="none" />
       </g>
 
-      {/* Crystal lattices — cube wireframe, left */}
-      <g transform="translate(70,320)" stroke="#ffd166" strokeWidth="1.2" opacity="0.85">
-        <polygon points="-16,-10 8,-16 24,-4 0,2" fill="none" />
-        <polygon points="-16,10 8,4 24,16 0,22" fill="none" />
-        <line x1="-16" y1="-10" x2="-16" y2="10" />
-        <line x1="8" y1="-16" x2="8" y2="4" />
-        <line x1="24" y1="-4" x2="24" y2="16" />
-        <line x1="0" y1="2" x2="0" y2="22" />
+      {/* BCC crystal structure — top-left */}
+      <g transform="translate(95,120)" stroke="#ffd166" strokeWidth="1">
+        <polygon points="-17,-11 9,-17 26,-4 0,2" fill="none" />
+        <polygon points="-17,11 9,5 26,18 0,24" fill="none" />
+        <line x1="-17" y1="-11" x2="-17" y2="11" />
+        <line x1="9" y1="-17" x2="9" y2="5" />
+        <line x1="26" y1="-4" x2="26" y2="18" />
+        <line x1="0" y1="2" x2="0" y2="24" />
+        <circle cx="4.5" cy="3" r="1.6" fill="#ffd166" stroke="none" />
       </g>
 
-      {/* Phase diagrams — mini curve + axes, bottom-left */}
-      <g transform="translate(130,500)" stroke="#ffd166" strokeWidth="1.2" opacity="0.85">
-        <line x1="-20" y1="18" x2="-20" y2="-18" />
-        <line x1="-20" y1="18" x2="20" y2="18" />
-        <path d="M -20 2 Q 0 -20 20 -4" fill="none" strokeDasharray="3 2" />
+      {/* Grain boundary / atomic lattice — bottom-right */}
+      <g transform="translate(600,490)" stroke="#ffd166" strokeWidth="1">
+        <polygon points="0,-20 17,-10 17,10 0,20 -17,10 -17,-10" fill="none" />
+        <polygon points="0,-20 17,-10 0,0 -17,-10" fill="none" opacity="0.6" />
       </g>
 
-      {/* Diffusion paths — dotted arrow path, top-right */}
-      <g transform="translate(610,130)" stroke="#ffd166" strokeWidth="1.2" opacity="0.85">
-        <path d="M -18 14 Q 0 -6 20 -16" fill="none" strokeDasharray="2 3" />
-        <polygon points="20,-16 13,-14 17,-9" fill="#ffd166" stroke="none" />
-      </g>
-
-      {/* Atomic bonds — small node cluster, right */}
-      <g stroke="#ffd166" strokeWidth="1.1" opacity="0.85">
-        <line x1="630" y1="340" x2="612" y2="322" />
-        <line x1="630" y1="340" x2="650" y2="326" />
-        <line x1="630" y1="340" x2="636" y2="360" />
-        <circle cx="630" cy="340" r="3.2" fill="#ffd166" stroke="none" />
-        <circle cx="612" cy="322" r="2.2" fill="#ffd166" stroke="none" />
-        <circle cx="650" cy="326" r="2.2" fill="#ffd166" stroke="none" />
-        <circle cx="636" cy="360" r="2.2" fill="#ffd166" stroke="none" />
-      </g>
-
-      {/* Metallographic microstructures — small hex-cell cluster, bottom-right */}
-      <g transform="translate(570,500)" stroke="#ffd166" strokeWidth="1" opacity="0.85">
-        <polygon points="0,-14 12,-7 12,7 0,14 -12,7 -12,-7" fill="none" />
-        <polygon points="20,-2 30,4 30,16 20,22 10,16 10,4" fill="none" />
+      {/* Atomic bonds — small molecule, top-right */}
+      <g stroke="#ffd166" strokeWidth="1">
+        <line x1="605" y1="140" x2="588" y2="123" />
+        <line x1="605" y1="140" x2="624" y2="127" />
+        <line x1="605" y1="140" x2="611" y2="160" />
+        <circle cx="605" cy="140" r="2.8" fill="#ffd166" stroke="none" />
+        <circle cx="588" cy="123" r="2" fill="#ffd166" stroke="none" />
+        <circle cx="624" cy="127" r="2" fill="#ffd166" stroke="none" />
+        <circle cx="611" cy="160" r="2" fill="#ffd166" stroke="none" />
       </g>
     </svg>
   );
@@ -221,7 +189,7 @@ function HeroConceptNetwork() {
 function MaterialsIllustration() {
   return (
     <div className="relative w-full h-[420px] sm:h-[480px] lg:h-[540px]">
-      <HeroConceptNetwork />
+      <HeroConceptIllustrations />
       <HeroCrystalLattice />
     </div>
   );
