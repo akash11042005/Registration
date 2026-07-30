@@ -7,7 +7,7 @@
     --font-sans: 'Inter', 'Plus Jakarta Sans', system-ui, sans-serif;
     --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
     --color-navy-950: #0f1230;
-    --color-navy-900: #1e2460;
+    --color-navy-900: #050b49;
     --color-gold-500: #d4a017;
     --color-gold-400: #facc15;
   }
@@ -211,7 +211,7 @@
   }
 
   .gradient-navy {
-    background: linear-gradient(90deg, #233de0 0%, #16289a 55%, #0e1963 100%);
+    background: linear-gradient(90deg, #29347c 0%, #16289a 55%, #0a134e 100%);
   }
 
   .lattice-bg {
