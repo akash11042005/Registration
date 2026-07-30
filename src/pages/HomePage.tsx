@@ -149,8 +149,6 @@ export default function HomePage() {
     <PageTransition>
       {/* ── Hero ── */}
       <section className="relative min-h-screen gradient-navy overflow-hidden flex flex-col justify-center">
-        <LatticeSVG />
-
         {/* Subtle gradient orbs */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gold-500/5 blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/3 right-1/4 w-72 h-72 rounded-full bg-blue-500/5 blur-3xl pointer-events-none" />
