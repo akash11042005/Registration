@@ -43,7 +43,7 @@ const IS_COARSE_POINTER = typeof window !== 'undefined' && window.matchMedia?.('
 const PREFERS_REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 // Denser than the earlier version, and a larger point size below, so the
 // specimen reads as filled rather than showing gaps of empty background.
-const GRAIN_COUNT = IS_COARSE_POINTER ? 13000 : 27000;
+const GRAIN_COUNT = IS_COARSE_POINTER ? 16000 : 34000;
 const MAX_DPR = IS_COARSE_POINTER ? 1 : 2;
 
 // Tensile specimen (dog-bone) silhouette shape.
