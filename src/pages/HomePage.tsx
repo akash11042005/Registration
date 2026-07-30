@@ -109,7 +109,7 @@ const staggerItem = {
 // ─────────────────────────────────────────────────
 function LatticeSVG() {
   return (
-    <svg className="absolute inset-0 w-full h-full opacity-[0.06]" aria-hidden="true">
+    <svg className="absolute inset-0 w-full h-full opacity-[0.025]" aria-hidden="true">
       <defs>
         <pattern id="lattice" x="0" y="0" width="60" height="60" patternUnits="userSpaceOnUse">
           <circle cx="30" cy="30" r="2" fill="white" />
