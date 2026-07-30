@@ -122,7 +122,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     cap: 8,
   },
   {
-    id: 10,
+    id: 9,
     title: 'Overheating & Grain Coarsening',
     category: 'Phase Transformations',
     difficulty: 'Medium',
@@ -134,7 +134,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     cap: 8,
   },
   {
-    id: 11,
+    id: 10,
     title: 'Delta Ferrite Measurement in Stainless Steel',
     category: 'Metallography',
     difficulty: 'Hard',
