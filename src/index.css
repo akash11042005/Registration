@@ -211,7 +211,7 @@
   }
 
   .gradient-navy {
-    background: linear-gradient(135deg, #0a0e24 0%, #05060f 100%);
+    background: linear-gradient(90deg, #4b54ce 0%, #1e2460 45%, #121536 100%);
   }
 
   .lattice-bg {
