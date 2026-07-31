@@ -17,13 +17,12 @@ export interface Registration {
   collegeName: string;
   member1Name?: string;
   member2Name?: string;
-  mentorName: string;
+  mentorName?: string;
   mentorEmail?: string;
   mentorPhone?: string;
   taskId: number;
   taskTitle: string;
   transactionId: string;
-  paymentScreenshotUrl?: string;
   paymentStatus: PaymentStatus;
   uid: string;
   wantsHomeDelivery?: boolean;

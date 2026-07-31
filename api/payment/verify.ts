@@ -28,7 +28,7 @@ interface RegistrationInput {
     collegeName: string;
     member1Name?: string;
     member2Name?: string;
-    mentorName: string;
+    mentorName?: string;
     mentorEmail?: string;
     mentorPhone?: string;
     taskId: number;
@@ -46,7 +46,6 @@ function isValidRegistration(x: unknown): x is RegistrationInput {
         typeof r.leaderEmail === 'string' &&
         typeof r.leaderPhone === 'string' &&
         typeof r.collegeName === 'string' &&
-        typeof r.mentorName === 'string' &&
         typeof r.taskId === 'number' &&
         typeof r.uid === 'string'
     );
@@ -138,13 +137,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const userRef = db.collection('users').doc(registration.uid);
 
     try {
-        // ── Step 3: double-submit guard (its own read, kept outside the transaction
-        // since Firestore transactions require all reads before any writes and this
-        // is a simple idempotency check, not part of the capacity race) ──
+        // ── Step 3a: double-submit guard — same payment ID replayed (retry safety) ──
         const dupe = await registrationsRef.where('razorpayPaymentId', '==', razorpay_payment_id).limit(1).get();
         if (!dupe.empty) {
             const existing = dupe.docs[0].data();
             return res.status(200).json({ ...existing, id: dupe.docs[0].id });
+        }
+
+        // ── Step 3b: one-registration-per-user guard — a DIFFERENT payment from
+        // a uid that already has a registration. Nothing before this stopped
+        // someone from completing a second, entirely separate payment and
+        // ending up with two registrations. Since money was genuinely taken
+        // here, this is never silently rejected — it's flagged the same way
+        // an after-capacity payment is, for a manual refund/merge decision. ──
+        const existingForUid = await registrationsRef.where('uid', '==', registration.uid).limit(1).get();
+        if (!existingForUid.empty) {
+            await db.collection('payment_issues').add({
+                reason: 'duplicate_registration_attempt',
+                razorpayOrderId: razorpay_order_id,
+                razorpayPaymentId: razorpay_payment_id,
+                registration,
+                totalFee,
+                existingRegistrationId: existingForUid.docs[0].id,
+                createdAt: FieldValue.serverTimestamp(),
+            });
+            return res.status(409).json({
+                error: 'You already have a registration on file. This payment was received but a second registration was not created — our team will contact you about a refund. Please note your Payment ID: ' + razorpay_payment_id,
+            });
         }
 
         const createdAtIso = new Date().toISOString();
@@ -159,7 +178,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             collegeName: registration.collegeName,
             member1Name: registration.member1Name || null,
             member2Name: registration.member2Name || null,
-            mentorName: registration.mentorName,
+            mentorName: registration.mentorName || null,
             mentorEmail: registration.mentorEmail || null,
             mentorPhone: registration.mentorPhone || null,
             taskId: registration.taskId,

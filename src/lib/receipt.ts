@@ -68,7 +68,7 @@ export function downloadRegistrationReceipt(reg: Registration) {
     line(6);
 
     heading('Mentor');
-    row('Mentor Name', reg.mentorName);
+    row('Mentor Name', reg.mentorName || '');
     if (reg.mentorEmail) row('Mentor Email', reg.mentorEmail);
     if (reg.mentorPhone) row('Mentor Contact', reg.mentorPhone);
     line(6);

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
+import { useTaskRegistrationCounts, useRegistrationByUid } from '@/hooks/useFirestore';
 import { payWithRazorpay } from '@/lib/razorpay';
 import { authFetch } from '@/lib/authFetch';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
@@ -45,7 +45,7 @@ const step1Schema = z.object({
   collegeName: z.string().min(2, 'College name is required'),
   member1Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
   member2Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
-  mentorName: z.string().min(2, 'Mentor name is required'),
+  mentorName: z.string().optional(),
   mentorEmail: z.union([z.string().email('Enter a valid email'), z.literal('')]).optional(),
   mentorPhone: z.union([z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit number'), z.literal('')]).optional(),
   taskId: z.number({ message: 'Please select a problem statement' }),
@@ -67,6 +67,17 @@ export default function RegistrationPage() {
   const defaultTaskId = searchParams.get('task') ? Number(searchParams.get('task')) : undefined;
 
   const taskCounts = useTaskRegistrationCounts();
+  const { data: existingRegistration, isLoading: checkingExistingRegistration } = useRegistrationByUid(user?.uid);
+
+  // A signed-in user who already has a registration shouldn't be able to pay
+  // again and end up with a second one — send them to their dashboard instead.
+  // (The server-side guard in api/payment/verify.ts is the real backstop —
+  // this is just so a returning user never gets this far in the first place.)
+  useEffect(() => {
+    if (!checkingExistingRegistration && existingRegistration) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [checkingExistingRegistration, existingRegistration, navigate]);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -530,55 +541,6 @@ export default function RegistrationPage() {
                 <p className="text-xs text-metal-500">A team can be just the leader, or the leader plus up to 2 additional members (max team size: 3).</p>
               </div>
 
-              {/* Mentor Details */}
-              <div className="space-y-4 pt-4 border-t border-metal-100">
-                <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Mentor Details</h3>
-
-                <div>
-                  <label className="form-label" htmlFor="mentorName">Mentor Name *</label>
-                  <input
-                    {...step1Form.register('mentorName')}
-                    id="mentorName"
-                    className={cn('form-input', step1Form.formState.errors.mentorName && 'border-red-400')}
-                    placeholder="Full Name"
-                  />
-                  {step1Form.formState.errors.mentorName && (
-                    <p className="form-error">{step1Form.formState.errors.mentorName.message}</p>
-                  )}
-                </div>
-
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label" htmlFor="mentorEmail">Mentor Email (Optional)</label>
-                    <input
-                      {...step1Form.register('mentorEmail')}
-                      id="mentorEmail"
-                      type="email"
-                      className={cn('form-input', step1Form.formState.errors.mentorEmail && 'border-red-400')}
-                      placeholder="mentor@college.edu"
-                    />
-                    {step1Form.formState.errors.mentorEmail && (
-                      <p className="form-error">{step1Form.formState.errors.mentorEmail.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="form-label" htmlFor="mentorPhone">Mentor Contact Number (Optional)</label>
-                    <input
-                      {...step1Form.register('mentorPhone')}
-                      id="mentorPhone"
-                      type="tel"
-                      maxLength={10}
-                      className={cn('form-input', step1Form.formState.errors.mentorPhone && 'border-red-400')}
-                      placeholder="10-digit mobile number"
-                    />
-                    {step1Form.formState.errors.mentorPhone && (
-                      <p className="form-error">{step1Form.formState.errors.mentorPhone.message}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
               {/* Task Selection */}
               <div className="space-y-4 pt-4 border-t border-metal-100">
                 <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Selected Problem Statement *</h3>
@@ -802,29 +764,6 @@ export default function RegistrationPage() {
                       <div>
                         <span className="text-metal-500">Member 2:</span>
                         <p className="font-semibold text-navy-900">{step1Form.getValues('member2Name')}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Mentor Summary */}
-                <div className="space-y-2 pt-4">
-                  <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Mentor Details</h3>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <span className="text-metal-500">Mentor Name:</span>
-                      <p className="font-semibold text-navy-900">{step1Form.getValues('mentorName')}</p>
-                    </div>
-                    {step1Form.getValues('mentorEmail') && (
-                      <div>
-                        <span className="text-metal-500">Mentor Email:</span>
-                        <p className="font-semibold text-navy-900">{step1Form.getValues('mentorEmail')}</p>
-                      </div>
-                    )}
-                    {step1Form.getValues('mentorPhone') && (
-                      <div>
-                        <span className="text-metal-500">Mentor Contact:</span>
-                        <p className="font-semibold text-navy-900">{step1Form.getValues('mentorPhone')}</p>
                       </div>
                     )}
                   </div>

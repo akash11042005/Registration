@@ -96,7 +96,7 @@ export default function SignUpPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="form-label" htmlFor="displayName">Full Name</label>
+                <label className="form-label" htmlFor="displayName">Team Leader's Name</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-metal-400" />
                   <input
@@ -105,7 +105,7 @@ export default function SignUpPage() {
                     type="text"
                     autoComplete="name"
                     className={cn('form-input pl-10', errors.displayName && 'border-red-400')}
-                    placeholder="Your full name"
+                    placeholder="Team Leader's Name"
                   />
                 </div>
                 {errors.displayName && <p className="form-error"><AlertCircle className="w-3 h-3" />{errors.displayName.message}</p>}
