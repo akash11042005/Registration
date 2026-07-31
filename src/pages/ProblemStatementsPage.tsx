@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Filter, X, ChevronRight, FlaskConical, Users, AlertCircle, Info, ArrowRight } from 'lucide-react';
@@ -221,6 +221,16 @@ export default function ProblemStatementsPage() {
   const [search, setSearch] = useState('');
   const [selectedPs, setSelectedPs] = useState<ProblemStatement | null>(null);
   const counts = useTaskRegistrationCounts();
+
+  // Best-effort background cleanup — an interrupted checkout elsewhere can
+  // leave a temporary 2-minute slot hold behind, which would otherwise only
+  // get cleared out the next time someone tries reserving that SAME task.
+  // Browsing this page happens far more often, so trigger the sweep here
+  // too for a faster, more reliable self-heal. Never blocks rendering, and
+  // any failure is silently ignored — this is a courtesy, not a load-bearing call.
+  useEffect(() => {
+    fetch('/api/payment/cleanup-stale-holds', { method: 'POST' }).catch(() => { });
+  }, []);
 
   const filtered = useMemo(() => {
     return PROBLEM_STATEMENTS.filter((ps) => {
