@@ -240,16 +240,29 @@ export default function RegistrationPage() {
     }
   };
 
-  // If the user navigates away or closes the tab while a hold is active,
-  // release it immediately rather than making others wait out the full 2 minutes.
+  // Release an active hold immediately rather than making others wait out
+  // the full 2 minutes — covers two different situations that need two
+  // different mechanisms:
+  //  1. Navigating to another page within the app (e.g. clicking a Link) —
+  //     caught by this effect's own cleanup function, which React runs on
+  //     unmount.
+  //  2. An actual browser-level refresh, back/forward, or tab close — a
+  //     React effect's cleanup does NOT fire for these (the whole JS
+  //     context gets torn down before React gets a chance), so this also
+  //     needs a real `pagehide` listener on `window` itself.
   useEffect(() => {
-    return () => {
+    const releaseActiveHold = () => {
       if (activeHoldRef.current) {
         navigator.sendBeacon?.(
           '/api/payment/release-hold',
           new Blob([JSON.stringify({ holdId: activeHoldRef.current.holdId })], { type: 'application/json' })
         );
       }
+    };
+    window.addEventListener('pagehide', releaseActiveHold);
+    return () => {
+      window.removeEventListener('pagehide', releaseActiveHold);
+      releaseActiveHold();
     };
   }, []);
 
@@ -449,7 +462,7 @@ export default function RegistrationPage() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="form-label" htmlFor="leaderName">Leader's Name *</label>
+                    <label className="form-label" htmlFor="leaderName">Full Name *</label>
                     <input
                       {...step1Form.register('leaderName')}
                       id="leaderName"
