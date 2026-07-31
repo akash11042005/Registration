@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import heroImg from '@/assets/hero.png';
+import inaugGroupImg from '@/assets/gallery/inauguration-group-certificates.jpeg';
+import inaugLampImg from '@/assets/gallery/inauguration-lamp-lighting.jpeg';
+import inaugFelicitationImg from '@/assets/gallery/inauguration-felicitation.jpeg';
 
 const fadeInUp = {
     initial: { opacity: 0, y: 24 },
@@ -23,9 +26,9 @@ interface GalleryImage {
 }
 
 const GALLERY_IMAGES: GalleryImage[] = [
-    { src: heroImg, alt: 'Metallography lab session, AAYODHYAM 2025', year: '2025' },
-    { src: heroImg, alt: 'Jury evaluation round, AAYODHYAM 2025', year: '2025' },
-    { src: heroImg, alt: 'Winning team presentation, AAYODHYAM 2025', year: '2025' },
+    { src: inaugLampImg, alt: 'Inauguration lamp-lighting ceremony, Department of Mechanical Engineering, Walchand College of Engineering, Sangli', year: '2025' },
+    { src: inaugFelicitationImg, alt: 'Felicitation of guests at the inauguration ceremony', year: '2025' },
+    { src: inaugGroupImg, alt: 'Winning teams and organizers with certificates, AAYODHYAM 2025', year: '2025' },
     { src: heroImg, alt: 'Heat treatment furnace demo, AAYODHYAM 2025', year: '2025' },
     { src: heroImg, alt: 'Opening ceremony, AAYODHYAM 2024', year: '2024' },
     { src: heroImg, alt: 'Tensile testing station, AAYODHYAM 2024', year: '2024' },
