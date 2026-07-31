@@ -296,9 +296,7 @@ export default function HeroCrystalLattice() {
                 {!IS_COARSE_POINTER && (
                     <OrbitControls
                         enablePan={false}
-                        enableZoom={true}
-                        minDistance={6}
-                        maxDistance={13}
+                        enableZoom={false}
                         enableDamping
                         dampingFactor={0.08}
                         rotateSpeed={0.5}
