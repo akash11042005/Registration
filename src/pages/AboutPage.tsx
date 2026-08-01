@@ -35,10 +35,10 @@ export default function AboutPage() {
             <h2 className="text-title text-navy-900 mb-4">About AAYODHYAM</h2>
             <div className="space-y-4 text-sm text-metal-600 leading-relaxed">
               <p>
-                AAYODHYAM 2026 is a national-level, on-campus Metallurgy & Materials Innovation Hackathon, bringing together the most talented engineering students from across India to solve real-world challenges in metallurgy, materials processing, and computational materials science.
+                AAYODHYAM 2026 is a national-level, Metallurgy & Materials Innovation Hackathon, bringing together the most talented engineering students from across India to solve real-world challenges in metallurgy, materials processing, and computational materials science.
               </p>
               <p>
-                The name <strong className="text-navy-900">AAYODHYAM</strong> embodies the spirit of relentless problem-solving — a fusion of innovation and precision that defines the metallurgical engineer's craft. Rooted in the Sanskrit concept of an undefeatable challenge, AAYODHYAM represents a competition where intellect, experimentation, and engineering rigor converge.
+                The name <strong className="text-navy-900">AAYODHYAM</strong> embodies the spirit of relentless problem-solving — a fusion of innovation and precision that defines the engineer's craft. Rooted in the Sanskrit concept of an undefeatable challenge, AAYODHYAM represents a competition where intellect, experimentation, and engineering rigor converge.
               </p>
               <p>
                 Unlike typical hackathons, AAYODHYAM is a <em>lab-based</em> research competition — participants conduct real experiments, analyze microstructures, test mechanical properties, and build computational tools. The results are evaluated by a panel of expert faculty and industry professionals using the same standards as published research.
@@ -54,7 +54,7 @@ export default function AboutPage() {
             <h2 className="text-title text-navy-900 mb-4">Dept. of Metallurgy & Materials Engineering</h2>
             <div className="space-y-4 text-sm text-metal-600 leading-relaxed">
               <p>
-                The Department of Metallurgy & Materials Engineering at WCE Sangli is one of Maharashtra's leading centers for metallurgical education and research. Established with a vision to produce industry-ready metallurgical engineers, the department has a strong legacy of academic excellence and applied research.
+                The Department of Mechanical Engineering at WCE Sangli is one of Maharashtra's leading centers for metallurgical education and research. Established with a vision to produce industry-ready metallurgical engineers, the department has a strong legacy of academic excellence and applied research.
               </p>
               <p>
                 The department is equipped with modern metallurgical laboratories including optical and electron microscopy, heat treatment facilities, mechanical testing rigs, XRD, and computational tools. Faculty members are actively involved in research collaborations with Indian steel majors, automotive OEMs, and DRDO projects.
