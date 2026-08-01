@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Globe, Clock } from 'lucide-react';
+import { Mail, Phone, MapPin, Globe } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { ORG } from '@/lib/constants';
 
@@ -44,8 +44,15 @@ export default function ContactPage() {
               {
                 icon: Phone,
                 label: 'Phone',
-                value: ORG.phone,
-                href: `tel:${ORG.phone}`,
+                value: ORG.phones[0],
+                href: `tel:${ORG.phones[0].replace(/\s/g, '')}`,
+                color: 'text-emerald-600 bg-emerald-50',
+              },
+              {
+                icon: Phone,
+                label: 'Phone (Alternate)',
+                value: ORG.phones[1],
+                href: `tel:${ORG.phones[1].replace(/\s/g, '')}`,
                 color: 'text-emerald-600 bg-emerald-50',
               },
               {
@@ -61,12 +68,6 @@ export default function ContactPage() {
                 label: 'Address',
                 value: `${ORG.name}, ${ORG.college}, ${ORG.location}`,
                 color: 'text-gold-600 bg-gold-50',
-              },
-              {
-                icon: Clock,
-                label: 'Office Hours',
-                value: 'Monday–Friday, 10:00 AM – 5:00 PM IST',
-                color: 'text-orange-600 bg-orange-50',
               },
             ].map((item) => {
               const Icon = item.icon;

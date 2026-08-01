@@ -59,7 +59,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2.5 text-sm text-metal-300">
                 <Phone className="w-4 h-4 text-gold-400 shrink-0" />
-                <span>{ORG.phone}</span>
+                <span>{ORG.phones.join(' / ')}</span>
               </div>
               <div className="flex items-center gap-2.5 text-sm text-metal-300">
                 <Globe className="w-4 h-4 text-gold-400 shrink-0" />

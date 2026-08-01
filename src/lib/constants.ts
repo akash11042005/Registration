@@ -46,9 +46,9 @@ export const ORG = {
   name: 'Department of Metallurgy & Materials Engineering',
   college: 'Walchand College of Engineering',
   location: 'Vishrambag, Sangli, Maharashtra – 416415',
-  email: 'metallurgy@walchandsangli.ac.in',
+  email: 'aayodhyam@walchandsangli.ac.in',
   website: 'https://walchandsangli.ac.in',
-  phone: '+91-233-2304000',
+  phones: ['+91 83568 88203', '+91 77000 61518'],
 } as const;
 
 // Default fallback announcements shown when Firestore collection is empty
