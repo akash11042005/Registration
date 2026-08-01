@@ -1,5 +1,7 @@
 // ============================================================
-// Problem Statements Data — AAYODHYAM 2026 (11 tasks)
+// Problem Statements Data — AAYODHYAM 2026 (10 tasks)
+// Sourced from the official "Aayodhyam Problem Statements &
+// Working Instructions" document.
 // ============================================================
 
 export type ProblemCategory =
@@ -11,11 +13,14 @@ export type ProblemCategory =
 
 export type Difficulty = 'Medium' | 'Hard' | 'Advanced';
 
+export type EvaluationMode = 'Offline' | 'Online/Offline';
+
 export interface ProblemStatement {
   id: number;
   title: string;
   category: ProblemCategory;
   difficulty: Difficulty;
+  mode: EvaluationMode;
   objective: string;
   objectiveFull: string;
   labEquipment: string[];
@@ -24,113 +29,136 @@ export interface ProblemStatement {
   cap: number;
 }
 
+// General instructions applicable to every problem statement, per the
+// official document — not yet surfaced in the UI; shown here so the
+// content isn't lost, and easy to wire into the Problem Statements page
+// as an intro banner later if wanted.
+export const GENERAL_WORK_INSTRUCTIONS: string[] = [
+  'All processes/results/treatment images must be captured with GPS location tracking enabled (geotagged photos).',
+  'Teams must clearly mention whether the work was carried out inside the college laboratory or at an outside facility.',
+  'Photographic/documentary evidence must be maintained at every stage of processing, not only for the final result.',
+  'Sample identification stamp/marking must be maintained throughout processing.',
+  'Teams must present their treatment parameters, evaluation and measurement methods, and final test results in the PPT.',
+  'The exact material type and grade of the sample will be provided.',
+  'This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+];
+
 export const PROBLEM_STATEMENTS: ProblemStatement[] = [
   {
     id: 1,
     title: 'Decarburization Zone Measurement',
     category: 'Metallography',
     difficulty: 'Medium',
-    objective: 'Quantify decarburization depth from high-temperature atmospheric heating in carbon steels via ferrite-layer microstructural analysis.',
-    objectiveFull: 'Participants will heat plain carbon steel specimens in an atmospheric furnace and metallographically prepare cross-sections to reveal the decarburized surface layer. The ferrite zone depth must be quantified using calibrated optical microscopy (eyepiece micrometer or image analysis), etched with 2% Nital. Results will be compared against expected depth based on heating time–temperature data.',
-    labEquipment: ['Muffle furnace', 'Metallographic polishing wheel', 'Optical microscope with calibrated eyepiece', 'Nital etchant (2%)', 'Mounting press', 'SiC abrasive papers'],
-    evaluationCriteria: 'Accuracy and precision of decarburization depth measurement; quality of metallographic preparation (surface finish, etch contrast); methodology documentation; correlation of microstructural observation with heating parameters; statistical repeatability across multiple sections.',
-    tags: ['Decarburization', 'Carbon Steel', 'Optical Microscopy', 'Ferrite', 'Nital Etching', 'ASTM E1077'],
+    mode: 'Offline',
+    objective: 'Produce a decarburized zone in a steel specimen and accurately measure its depth under the microscope.',
+    objectiveFull: 'The task is to produce a decarburized depth zone and measure it accurately. The decarburized zone must be clearly visible so its depth can be measured under a microscope. If the specimen requires mounting, it must be mounted prior to submission. Teams must provide a clear image showing the decarb zone, and sample identification stamp/marking must be maintained throughout processing. This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+    labEquipment: ['Muffle furnace', 'Metallographic mounting press', 'Polishing wheel', 'Optical microscope with calibrated eyepiece', 'Etchant for decarb-zone contrast', 'Sample marking/stamping tools'],
+    evaluationCriteria: 'The team with a clearly visible decarburized zone and the maximum measured depth will be declared the winner.',
+    tags: ['Decarburization', 'Offline', 'Optical Microscopy', 'Sample Marking', 'WCE Evaluation'],
     cap: 8,
   },
   {
     id: 2,
-    title: 'Prior Austenite Grain Size Revelation',
-    category: 'Metallography',
+    title: 'Strain Ageing Demonstration',
+    category: 'Mechanical Testing',
     difficulty: 'Hard',
-    objective: 'Reveal prior austenite grain boundaries in heat-treated steel using specialized etchants and calculate grain size to ASTM E112.',
-    objectiveFull: 'Participants will reveal prior austenite grain boundaries (PAGBs) in hardened and tempered alloy or tool steel samples using Picral or saturated aqueous picric acid etchant with a wetting agent. The challenge lies in achieving consistent PAGB decoration without over- or under-etching. Grain size must be computed using the Heyn linear intercept method or comparison charts per ASTM E112.',
-    labEquipment: ['Picral / saturated picric acid etchant with wetting agent', 'Optical microscope with eyepiece graticule', 'Metallographic preparation station', 'Hardness tester (HRC)'],
-    evaluationCriteria: 'Quality of prior austenite grain boundary decoration; correct application of ASTM E112 intercept or comparison method; reproducibility across multiple fields of view; identification of etching artefacts; correlation of measured ASTM grain size number with reported heat treatment conditions.',
-    tags: ['Prior Austenite', 'Grain Size', 'ASTM E112', 'Picral Etching', 'Hardened Steel', 'PAGBs'],
+    mode: 'Offline',
+    objective: 'Determine and demonstrate the yield point phenomenon in a given sample, including its behavior after strain ageing.',
+    objectiveFull: 'The team will receive a sample with its material type and grade specified. If the specimen requires mounting, it must be mounted prior to submission, and sample identification stamp/marking must be maintained throughout processing. Teams must communicate their requirements to the organizers prior to evaluation. This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+    labEquipment: ['Universal Testing Machine (UTM)', 'Ageing oven / oil bath', 'Tensile specimens as supplied', 'Data acquisition software'],
+    evaluationCriteria: 'The team achieving the maximum reappearance of the yield point after strain ageing wins.',
+    tags: ['Strain Ageing', 'Yield Point', 'Offline', 'UTM', 'WCE Evaluation'],
     cap: 8,
   },
   {
     id: 3,
-    title: 'Automated Grain Size Measurement (Python)',
+    title: 'App-Based Automated Grain Size Measurement',
     category: 'Computation & AI',
     difficulty: 'Advanced',
-    objective: 'Build an automated Python/OpenCV computer-vision pipeline for grain size evaluation from optical micrographs, benchmarked against the manual intercept method.',
-    objectiveFull: 'Participants will develop a Python 3.x image-processing pipeline (using OpenCV, scikit-image, or similar) capable of ingesting optical micrograph images, segmenting grain boundaries, and computing mean intercept length or equivalent grain diameter. The automated result must be validated against manual ASTM E112 measurements on the same micrographs. Participants should demonstrate robustness to variations in etch contrast and magnification.',
-    labEquipment: ['Computer lab with Python 3.x environment', 'Sample micrograph dataset (provided by WCE)', 'OpenCV / scikit-image libraries', 'Display for live demo'],
-    evaluationCriteria: 'Accuracy of automated grain size measurement vs. manual ground truth (% error); code quality, modularity, and documentation; robustness to image variability; computational efficiency; live demonstration on unseen micrograph; innovation in pipeline design (e.g., deep-learning segmentation, adaptive thresholding).',
-    tags: ['Python', 'OpenCV', 'Computer Vision', 'Image Analysis', 'Grain Size', 'scikit-image', 'ASTM E112', 'AI'],
+    mode: 'Online/Offline',
+    objective: 'Develop an app implementing both Planimetric and Intercept algorithms to extract grain size from a given image.',
+    objectiveFull: 'Teams are required to develop an application that automatically measures grain size from a given image. Both applicable measurement methods must be implemented — the intercept and planimetric methods, per ASTM E112. This evaluation will be carried out in hybrid mode — teams have the choice to select online or offline evaluation.',
+    labEquipment: ['Computer with development environment', 'Sample micrograph dataset (provided)', 'Image-processing libraries (e.g. OpenCV)'],
+    evaluationCriteria: 'The team with the least error compared to the known reference grain size wins.',
+    tags: ['Grain Size', 'ASTM E112', 'App Development', 'Hybrid Mode', 'Planimetric Method', 'Intercept Method'],
     cap: 8,
   },
   {
     id: 4,
-    title: 'Strain Ageing Demonstration',
-    category: 'Mechanical Testing',
-    difficulty: 'Hard',
-    objective: 'Demonstrate yield-point return and strain ageing in low-carbon steel after prestraining and thermal ageing, illustrating the Cottrell atmosphere mechanism.',
-    objectiveFull: 'Participants will conduct tensile testing of low-carbon steel specimens on a UTM to a pre-defined plastic strain (past the yield point), unload, and subject specimens to accelerated thermal ageing in an oil bath or oven at a specified temperature and duration. Re-testing must demonstrate a measurable increase in yield stress relative to the initial lower yield point, consistent with Cottrell atmosphere pinning of dislocations by interstitial carbon/nitrogen atoms. Engineering stress–strain curves must be plotted and annotated.',
-    labEquipment: ['Universal Testing Machine (UTM)', 'Ageing oil bath or controlled oven (100–200°C)', 'Tensile specimens (low-carbon steel, pre-machined)', 'Data acquisition software', 'Vernier calipers'],
-    evaluationCriteria: 'Clear demonstration of yield-point return (quantified ΔYS in MPa); quality and annotation of engineering stress–strain curves; accuracy of pre-strain calculation; thermal ageing parameter control; mechanistic explanation of Cottrell atmosphere in the written report; repeatability with duplicate specimens.',
-    tags: ['Strain Ageing', 'Cottrell Atmosphere', 'Yield Point Return', 'Low-Carbon Steel', 'UTM', 'Dislocations'],
+    title: 'Heat Treatment for Target Mechanical Properties',
+    category: 'Heat Treatment',
+    difficulty: 'Advanced',
+    mode: 'Offline',
+    objective: 'Design and carry out a heat treatment to meet or exceed specified minimum mechanical property requirements.',
+    objectiveFull: 'A material grade will be specified along with minimum required mechanical properties (tensile strength, yield strength, elongation). Teams must design and carry out a heat treatment to meet or exceed these minimum requirements. Sample identification stamp/marking must be maintained throughout processing. This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+    labEquipment: ['Heat treatment furnaces', 'Quenching tanks', 'Universal Testing Machine (UTM)', 'Hardness tester'],
+    evaluationCriteria: 'The team achieving the maximum mechanical properties without compensating the minimum requirements will be declared winner.',
+    tags: ['Heat Treatment', 'Mechanical Properties', 'Offline', 'Quenching', 'Tempering', 'WCE Evaluation'],
     cap: 8,
   },
   {
     id: 5,
-    title: 'Blue Brittleness Phenomenon',
-    category: 'Mechanical Testing',
-    difficulty: 'Hard',
-    objective: 'Investigate dynamic strain ageing and ductility drop in medium-carbon steel at 200–300°C, with blue oxide film as visual evidence.',
-    objectiveFull: 'Participants will conduct tensile or impact tests on medium-carbon steel specimens at elevated temperatures (200–300°C) — the "blue brittleness" range — and compare UTS, elongation, and impact energy against room-temperature baseline values. The characteristic blue oxide film on fracture surfaces or gauge sections must be documented. Serrated flow (Portevin–Le Chatelier effect) on the stress–strain curve should be identified and reported.',
-    labEquipment: ['High-temperature UTM or elevated-temperature impact tester', 'Heating chamber with thermocouple control', 'Medium-carbon steel specimens', 'Thermocouples + temperature logger', 'Photography for oxide film documentation'],
-    evaluationCriteria: 'Observation and quantification of the UTS maximum and ductility minimum in the 200–300°C range; documentation of blue oxide film; identification of PLC serrations on stress–strain curve; quality of data across temperature range; mechanistic explanation linking DSA to interstitial–dislocation interaction; completeness of report.',
-    tags: ['Blue Brittleness', 'DSA', 'PLC Effect', 'Medium-Carbon Steel', 'High-Temp Testing', 'Ductility', 'Oxide Film'],
+    title: 'Cast Iron Nodularity',
+    category: 'Metallography',
+    difficulty: 'Medium',
+    mode: 'Online/Offline',
+    objective: 'Evaluate a cast iron sample for graphite nodule count and percentage nodularity.',
+    objectiveFull: 'Teams must evaluate the sample for graphite nodule count and % nodularity. Nodularity and nodule count must be assessed per the applicable standard, ISO 945 (graphite classification in cast iron). This evaluation will be carried out in hybrid mode — teams have the choice to select online or offline evaluation.',
+    labEquipment: ['Optical microscope', 'Metallographic preparation station', 'Etchant for graphite contrast'],
+    evaluationCriteria: 'The team with the measurement closest to the given quantity of nodules wins.',
+    tags: ['Cast Iron', 'Nodularity', 'ISO 945', 'Graphite', 'Hybrid Mode'],
     cap: 8,
   },
   {
     id: 6,
-    title: 'Grain Size Refinement Challenge',
+    title: 'Grain Size Refinement',
     category: 'Phase Transformations',
     difficulty: 'Medium',
-    objective: 'Refine grain size of supplied plain carbon steel via thermomechanical processing or thermal cycling, demonstrating Hall–Petch strengthening.',
-    objectiveFull: 'Starting from a coarse-grained plain carbon steel billet (supplied), participants will design and execute a thermomechanical processing route (controlled rolling + controlled cooling, or multiple austenitizing + quench thermal cycles) to maximize grain refinement. Metallographic characterization before and after processing must quantify the grain size change (ASTM E112). Hardness measurements must demonstrate the corresponding Hall–Petch strengthening effect.',
-    labEquipment: ['Thermomechanical press or lab rolling mill (or controlled forging anvil)', 'Heat treatment furnaces', 'Metallography preparation bench', 'Optical microscope', 'Hardness tester (HV/HRB)'],
-    evaluationCriteria: 'Degree of grain refinement achieved (ΔASTM grain size number); quality of metallographic evidence; correlation of hardness improvement with Hall–Petch relationship (ΔHV vs. d⁻¹/²); documentation of processing route; repeatability; explanation of recrystallization and grain growth suppression mechanisms.',
-    tags: ['Grain Refinement', 'Hall–Petch', 'Thermomechanical Processing', 'Recrystallization', 'ASTM E112', 'Carbon Steel'],
+    mode: 'Offline',
+    objective: 'Refine the grain size of a provided sample, which initially has a coarser grain size than the target.',
+    objectiveFull: 'Refine the grain size of a provided sample, which initially has a coarser grain size than desired. Initial grain size must be recorded with photographic evidence before any processing, and teams must report the method used for grain size measurement. Final (refined) grain size must also be recorded with photographic evidence, with both initial and final evidence shown together for comparison. Sample identification stamp/marking must be maintained throughout processing. This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+    labEquipment: ['Heat treatment furnace', 'Optical microscope', 'Metallography preparation bench'],
+    evaluationCriteria: 'The team achieving the finest grain size / grain size number will be declared winner.',
+    tags: ['Grain Refinement', 'ASTM E112', 'Offline', 'Thermomechanical Processing', 'WCE Evaluation'],
     cap: 8,
   },
   {
     id: 7,
-    title: 'Heat Treatment for Target Mechanical Properties',
-    category: 'Heat Treatment',
+    title: 'AI Driven Material Identification via Spark Testing',
+    category: 'Computation & AI',
     difficulty: 'Advanced',
-    objective: 'Design and execute quenching/tempering/normalizing cycles to achieve specified target UTS, hardness, and elongation values in a supplied steel grade.',
-    objectiveFull: 'Participants will be given a target property specification (UTS range, Rockwell hardness range, minimum elongation) for a supplied medium-alloy steel grade, without a predefined heat treatment recipe. Teams must independently research and design the austenitizing temperature, soaking time, quench medium, and tempering cycle, then execute the treatment using WCE lab furnaces and test the resulting mechanical properties on the UTM and hardness tester. Results will be compared against the target spec.',
-    labEquipment: ['Heat treatment furnaces (up to 1100°C)', 'Quenching tanks (water, oil, polymer quench)', 'Rockwell hardness tester (HRC)', 'UTM with extensometer', 'Thermocouple + data logger', 'Metallography bench'],
-    evaluationCriteria: 'Proximity of achieved mechanical properties to target spec (primary); correctness of processing logic and design rationale; microstructural characterization of final condition (martensite, bainite, etc.); quality of hardness profile; evidence of systematic experimental approach; completeness of report including TTT/CCT reference.',
-    tags: ['Quenching', 'Tempering', 'Normalizing', 'Mechanical Properties', 'UTS', 'Hardness', 'Heat Treatment Design', 'TTT'],
+    mode: 'Online/Offline',
+    objective: 'Build an application that identifies material type from spark pattern testing.',
+    objectiveFull: 'Build an application that identifies material type from spark pattern testing. The application must classify and display the type of material identified, capturing the spark pattern via live video/images in real time. Evaluation will be carried out across at least five different material grades. Teams must justify their ML model selection criteria and the libraries/frameworks used. This evaluation will be carried out in hybrid mode — teams have the choice to select online or offline evaluation.',
+    labEquipment: ['Computer with development environment', 'Camera/imaging setup for spark capture', 'ML frameworks/libraries'],
+    evaluationCriteria: 'The team that accurately predicts the material for the highest number of spark videos/images wins.',
+    tags: ['Spark Testing', 'Material Identification', 'AI', 'Machine Learning', 'Hybrid Mode'],
     cap: 8,
   },
   {
     id: 8,
-    title: 'Hardenability – Jominy End Quench Test',
-    category: 'Heat Treatment',
+    title: 'Low Temperature Impact Toughness Improvement',
+    category: 'Mechanical Testing',
     difficulty: 'Hard',
-    objective: 'Conduct the standard Jominy End Quench test and plot hardness vs. distance-from-quenched-end curve to characterize steel hardenability.',
-    objectiveFull: 'Participants will austenitize a Jominy bar of supplied steel grade per ASTM A255 / ISO 642 protocol, mount it in the Jominy fixture, and quench the flat end with a water jet of specified flow rate and temperature. After cooling, two parallel flats are ground along the bar length and hardness readings (HRC) are taken at defined intervals from the quenched end. The resulting Jominy curve must be plotted and compared against published hardenability band data for the steel grade.',
-    labEquipment: ['Jominy end-quench setup with water jet fixture', 'High-temperature furnace with controlled atmosphere', 'Surface grinder or flat-file preparation', 'Rockwell C hardness tester', 'Vernier calipers for measurement positioning'],
-    evaluationCriteria: 'Correctness of Jominy test procedure per ASTM A255; accuracy and repeatability of hardness readings; quality of Jominy curve (smoothness, correct shape); comparison with published hardenability band; identification of martensite start/finish and critical hardness position; completeness of metallurgical interpretation.',
-    tags: ['Jominy Test', 'Hardenability', 'ASTM A255', 'Hardness Profile', 'Martensite', 'CCT', 'End Quench'],
+    mode: 'Offline',
+    objective: 'Apply a suitable treatment to a sample to maximize its low-temperature impact toughness.',
+    objectiveFull: 'Apply any suitable treatment to a sample to maximize its low-temperature impact toughness. Teams will be provided with a reference sample previously tested as a baseline. Testing will be conducted at subzero temperatures from -50°C to 0°C. Test samples will be provided with a pre-machined V-notch already prepared per ASTM E23 — the V-notch must be retained by the team and verified against the standard. This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+    labEquipment: ['Charpy impact tester', 'Subzero cooling setup', 'Pre-notched test samples (as supplied)'],
+    evaluationCriteria: 'The group with evidence of higher impact toughness values at lower temperatures (e.g. -40°C) will be treated as winner.',
+    tags: ['Impact Toughness', 'ASTM E23', 'Subzero Testing', 'Offline', 'Charpy Test', 'WCE Evaluation'],
     cap: 8,
   },
   {
     id: 9,
-    title: 'Overheating & Grain Coarsening',
-    category: 'Phase Transformations',
-    difficulty: 'Medium',
-    objective: 'Demonstrate grain coarsening and embrittlement from severe thermal overheating and measure hardness and impact toughness degradation.',
-    objectiveFull: 'Participants will subject supplied plain carbon or low-alloy steel specimens to severe overheating (>1100°C, well above the normal austenitizing range) for controlled durations, then normalize or air-cool. Metallographic sections must reveal dramatic grain coarsening compared to properly heat-treated baseline. Hardness traverses and Charpy impact tests will quantify the resulting embrittlement. The characteristic Widmanstätten ferrite or coarse pearlite structure should be documented.',
-    labEquipment: ['High-temperature furnace capable of >1100°C', 'Charpy impact tester', 'Metallography preparation bench', 'Optical microscope', 'Hardness tester (HV/HRB)', 'Charpy specimens (pre-notched)'],
-    evaluationCriteria: 'Quantification of grain coarsening (ASTM grain size before vs. after, ΔASTM number); documentation of Widmanstätten or coarse structure; measured reduction in Charpy impact energy; correlation of grain size with toughness loss; quality of metallographic images; mechanistic explanation of overheating embrittlement; practical implications discussed.',
-    tags: ['Grain Coarsening', 'Overheating', 'Charpy Impact', 'Toughness', 'Widmanstätten', 'Embrittlement', 'Phase Transformations'],
+    title: 'Precision Surface Hardening by Carburization',
+    category: 'Heat Treatment',
+    difficulty: 'Advanced',
+    mode: 'Offline',
+    objective: 'Perform controlled case carburizing on a given sample to meet target surface hardness while keeping case depth within a specified limit.',
+    objectiveFull: 'Teams must perform controlled case carburizing on a given sample to meet target surface hardness requirements while keeping the case depth within a specified maximum limit. The minimum carburization depth per standard specifications must be met, and the carburization zone must be clearly visible and marked on the microphotograph. Surface hardness must fall strictly within the range of 35 to 40 HRC. Teams needing mounting equipment for microscope inspection must bring their own. Sample identification stamp/marking must be maintained throughout processing. This evaluation will be carried out at Walchand College of Engineering, Sangli.',
+    labEquipment: ['Carburizing furnace', 'Rockwell hardness tester (HRC)', 'Optical microscope', 'Metallography preparation station'],
+    evaluationCriteria: 'The team that achieves the highest valid carburization depth — while meeting the minimum required surface hardness (HRC) and respecting the maximum depth limit — wins.',
+    tags: ['Carburization', 'Surface Hardening', 'ASTM E1245', 'Offline', 'Case Depth', 'WCE Evaluation'],
     cap: 8,
   },
   {
@@ -138,11 +166,12 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
     title: 'Delta Ferrite Measurement in Stainless Steel',
     category: 'Metallography',
     difficulty: 'Hard',
-    objective: 'Quantify delta-ferrite volume fraction in austenitic stainless steel weldments or heat-treated samples using ferrite meter and quantitative metallography.',
-    objectiveFull: 'Participants will characterize delta-ferrite in austenitic stainless steel weld beads or heat-treated samples (304/316 type) using two complementary methods: (a) magnetic ferrite meter measurement (Feritscope or equivalent) directly on polished surfaces, and (b) quantitative image analysis / point counting on electrolytically etched cross-sections. The two methods must be compared and discrepancies explained in terms of measurement volume and ferrite morphology (skeletal/lacy vs. globular).',
-    labEquipment: ['Ferrite meter (Feritscope / Fischer FE 8e or equivalent)', 'Electro-etching unit with oxalic acid (10%)', 'Optical metallographic microscope', 'Metallography preparation station', 'SS weld coupon / heat-treated specimens'],
-    evaluationCriteria: 'Agreement between ferrite meter and point-count / image analysis methods; correctness of electrolytic etching procedure; quality of contrast between delta-ferrite and austenite matrix; statistical adequacy of point-count measurement; interpretation of ferrite morphology and its origin (solidification mode, heat treatment); completeness of comparative analysis.',
-    tags: ['Delta Ferrite', 'Stainless Steel', 'Ferrite Meter', 'Feritscope', 'Electrolytic Etching', 'Weldment', 'Volume Fraction'],
+    mode: 'Online/Offline',
+    objective: 'Determine the quantity of delta ferrite present in a stainless steel sample.',
+    objectiveFull: 'Determine the quantity of ferrite in the sample. Teams must build an image processing application implementing ASTM E562, considering all formulas present in the standard. Sample identification stamp/marking must be maintained throughout processing. This evaluation will be carried out in hybrid mode — teams have the choice to select online or offline evaluation.',
+    labEquipment: ['Computer with development environment', 'Sample stainless steel micrographs', 'Image-processing libraries'],
+    evaluationCriteria: 'The team with the measurement closest to the given quantity of ferrite wins.',
+    tags: ['Delta Ferrite', 'Stainless Steel', 'ASTM E562', 'Hybrid Mode', 'Image Processing'],
     cap: 8,
   },
 ];
