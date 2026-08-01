@@ -248,7 +248,7 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    3 Aug – 19 Sep, 2026
+                    18th & 19th Sep, 2026
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
