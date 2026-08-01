@@ -3,7 +3,7 @@
 // Single source of truth, shared by TimelinePage.tsx (full detail)
 // and HomePage.tsx (preview). Update here and both pages stay in sync.
 // ─────────────────────────────────────────────────
-import { Megaphone, ClipboardList, ClipboardCheck, Truck, FlaskConical, Award, Trophy, LucideIcon } from 'lucide-react';
+import { Megaphone, ClipboardList, Truck, FlaskConical, Award, Trophy, LucideIcon } from 'lucide-react';
 
 export interface EventPhase {
     number: number;
@@ -32,34 +32,27 @@ export const EVENT_PHASES: EventPhase[] = [
     },
     {
         number: 3,
-        title: 'Extended Registration',
-        dateRange: 'Up to 12 Aug 2026',
-        description: 'A short additional window for teams who missed the main registration period.',
-        icon: ClipboardCheck,
-    },
-    {
-        number: 4,
         title: 'Material Dispatch',
         dateRange: '10 Aug – 14 Aug 2026',
         description: 'Specimen materials for each problem statement are dispatched to registered teams.',
         icon: Truck,
     },
     {
-        number: 5,
+        number: 4,
         title: 'Material Processing',
         dateRange: '13 Aug 2026 onwards',
         description: 'In-house (WCE) students begin processing from 13 Aug; other teams begin from the day their material is received.',
         icon: FlaskConical,
     },
     {
-        number: 6,
+        number: 5,
         title: 'Evaluation',
         dateRange: '18–19 Sep 2026',
         description: 'Jury evaluation for all teams. For 3 selected problem statements, a virtual assessment can be opted for on 17 Sep instead.',
         icon: Award,
     },
     {
-        number: 7,
+        number: 6,
         title: 'Prize Distribution Ceremony',
         dateRange: '19 Sep 2026',
         description: 'Winners announced and prizes awarded.',
