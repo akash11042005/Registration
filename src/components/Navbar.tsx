@@ -19,16 +19,8 @@ const navLinks = [
 export default function Navbar() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
-  const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 20);
-    onScroll();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   // Close mobile menu on route change size-up, and lock body scroll while open
   useEffect(() => {
@@ -46,12 +38,7 @@ export default function Navbar() {
   };
 
   return (
-    <header
-      className={cn(
-        'fixed top-0 inset-x-0 z-50 transition-all duration-300 bg-[#0C144C] border-b border-white/10',
-        isScrolled && 'shadow-card'
-      )}
-    >
+    <header className="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur-xl shadow-card border-b border-metal-100">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 md:h-18">
           {/* Logo */}
@@ -64,10 +51,10 @@ export default function Navbar() {
               className="w-9 h-9 rounded-full object-cover shrink-0"
             />
             <div className="hidden sm:block leading-none">
-              <span className="font-display font-bold text-white text-base leading-none block">
+              <span className="font-display font-bold text-navy-900 text-base leading-none block">
                 AAYODHYAM
               </span>
-              <span className="text-xs font-medium leading-none block mt-0.5 text-white/60">
+              <span className="text-xs font-medium leading-none block mt-0.5 text-metal-500">
                 2026 Hackathon
               </span>
             </div>
@@ -84,8 +71,8 @@ export default function Navbar() {
                   cn(
                     'relative px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive
-                      ? 'text-white'
-                      : 'text-white/85 hover:text-white hover:bg-white/10'
+                      ? 'text-navy-900'
+                      : 'text-metal-700 hover:text-navy-900 hover:bg-metal-900/5'
                   )
                 }
               >
@@ -95,7 +82,7 @@ export default function Navbar() {
                     {isActive && (
                       <motion.span
                         layoutId="nav-underline"
-                        className="absolute left-3 right-3 -bottom-0.5 h-0.5 rounded-full bg-gold-400"
+                        className="absolute left-3 right-3 -bottom-0.5 h-0.5 rounded-full bg-gold-500"
                         transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                       />
                     )}
@@ -112,18 +99,18 @@ export default function Navbar() {
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   onBlur={() => setTimeout(() => setUserMenuOpen(false), 150)}
-                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border border-white/30 bg-white/10 hover:border-white/60 transition-colors"
+                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border border-metal-200 bg-white hover:border-navy-300 transition-colors"
                 >
                   {user.photoURL ? (
                     <img src={user.photoURL} alt="avatar" className="w-6 h-6 rounded-full object-cover" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full bg-navy-900 flex items-center justify-center">
                       <span className="text-white text-xs font-bold">
                         {(user.displayName || user.email || 'U')[0].toUpperCase()}
                       </span>
                     </div>
                   )}
-                  <span className="text-sm font-medium max-w-[120px] truncate text-white">
+                  <span className="text-sm font-medium max-w-[120px] truncate text-metal-800">
                     {user.displayName || user.email?.split('@')[0]}
                   </span>
                 </button>
@@ -173,7 +160,7 @@ export default function Navbar() {
             ) : (
               <Link
                 to="/signin"
-                className="hidden lg:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-white border border-white/40 hover:bg-white/10"
+                className="hidden lg:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors text-navy-900 hover:bg-navy-900/5 border border-navy-200"
               >
                 Sign In
               </Link>
@@ -181,7 +168,7 @@ export default function Navbar() {
 
             {/* Mobile hamburger */}
             <button
-              className="lg:hidden p-2 rounded-lg transition-colors text-white hover:bg-white/10"
+              className="lg:hidden p-2 rounded-lg transition-colors text-metal-700 hover:bg-metal-900/5"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
               aria-expanded={mobileOpen}
