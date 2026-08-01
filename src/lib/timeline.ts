@@ -30,29 +30,23 @@ export const EVENT_PHASES: EventPhase[] = [
         icon: ClipboardList,
         highlight: true,
     },
+
     {
         number: 3,
-        title: 'Material Dispatch',
-        dateRange: '10 Aug – 14 Aug 2026',
-        description: 'Specimen materials for each problem statement are dispatched to registered teams.',
-        icon: Truck,
-    },
-    {
-        number: 4,
         title: 'Material Processing',
         dateRange: '13 Aug 2026 onwards',
         description: 'In-house (WCE) students begin processing from 13 Aug; other teams begin from the day their material is received.',
         icon: FlaskConical,
     },
     {
-        number: 5,
+        number: 4,
         title: 'Evaluation',
         dateRange: '18–19 Sep 2026',
         description: 'Jury evaluation for all teams. For 3 selected problem statements, a virtual assessment can be opted for on 17 Sep instead.',
         icon: Award,
     },
     {
-        number: 6,
+        number: 5,
         title: 'Prize Distribution Ceremony',
         dateRange: '19 Sep 2026',
         description: 'Winners announced and prizes awarded.',
