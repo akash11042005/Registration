@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
@@ -50,6 +50,14 @@ function LoadingFallback() {
 
 function AnimatedRoutes() {
   const location = useLocation();
+
+  // React Router doesn't reset scroll position on navigation by default —
+  // without this, clicking a nav link while scrolled down on the current
+  // page leaves you at that same scroll offset on the new page, looking
+  // like the page didn't load until you scroll back up manually.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   return (
     <Suspense fallback={<LoadingFallback />}>
