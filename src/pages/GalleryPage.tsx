@@ -2,10 +2,12 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
-import heroImg from '@/assets/hero.png';
 import inaugGroupImg from '@/assets/gallery/inauguration-group-certificates.jpeg';
 import inaugLampImg from '@/assets/gallery/inauguration-lamp-lighting.jpeg';
 import inaugFelicitationImg from '@/assets/gallery/inauguration-felicitation.jpeg';
+import winnerPranavCollageImg from '@/assets/gallery/winner-pranav-khot-collage.jpeg';
+import winnerTukendraCollageImg from '@/assets/gallery/winner-tukendra-golegaonkar-collage.jpeg';
+import certificatePranavImg from '@/assets/gallery/certificate-pranav-khot.jpeg';
 
 const fadeInUp = {
     initial: { opacity: 0, y: 24 },
@@ -29,11 +31,9 @@ const GALLERY_IMAGES: GalleryImage[] = [
     { src: inaugLampImg, alt: 'Inauguration lamp-lighting ceremony, Department of Mechanical Engineering, Walchand College of Engineering, Sangli', year: '2025' },
     { src: inaugFelicitationImg, alt: 'Felicitation of guests at the inauguration ceremony', year: '2025' },
     { src: inaugGroupImg, alt: 'Winning teams and organizers with certificates, AAYODHYAM 2025', year: '2025' },
-    { src: heroImg, alt: 'Heat treatment furnace demo, AAYODHYAM 2025', year: '2025' },
-    { src: heroImg, alt: 'Opening ceremony, AAYODHYAM 2024', year: '2024' },
-    { src: heroImg, alt: 'Tensile testing station, AAYODHYAM 2024', year: '2024' },
-    { src: heroImg, alt: 'Team collaboration, AAYODHYAM 2024', year: '2024' },
-    { src: heroImg, alt: 'Prize distribution, AAYODHYAM 2024', year: '2024' },
+    { src: winnerPranavCollageImg, alt: 'Pranav Khot receiving the Certificate of Achievement, Winner of AAYODHYAM 2025 Metallurgy Hackathon Task', year: '2025' },
+    { src: winnerTukendraCollageImg, alt: 'Tukendra Golegaonkar receiving the Certificate of Achievement, Winner of AAYODHYAM 2025 Metallurgy Hackathon Task', year: '2025' },
+    { src: certificatePranavImg, alt: 'Certificate of Achievement awarded to Pranav Khot, AAYODHYAM 2025', year: '2025' },
 ];
 
 export default function GalleryPage() {
