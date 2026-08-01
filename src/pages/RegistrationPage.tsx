@@ -462,7 +462,7 @@ export default function RegistrationPage() {
 
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="form-label" htmlFor="leaderName">Full Name *</label>
+                    <label className="form-label" htmlFor="leaderName">Team Leader's Name *</label>
                     <input
                       {...step1Form.register('leaderName')}
                       id="leaderName"
