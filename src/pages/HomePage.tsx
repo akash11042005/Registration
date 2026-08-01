@@ -20,6 +20,7 @@ import CountdownTimer from '@/components/CountdownTimer';
 import AnimatedCounter from '@/components/AnimatedCounter';
 import { useRegistrationStats } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
+import { EVENT_PHASES } from '@/lib/timeline';
 import { cn } from '@/lib/utils';
 
 const RULES_HIGHLIGHTS = [
@@ -73,16 +74,7 @@ const WHY_PARTICIPATE = [
 ];
 
 // ─────────────────────────────────────────────────
-// Timeline preview data
 // ─────────────────────────────────────────────────
-const TIMELINE_PREVIEW = [
-  { day: 'Monday', date: 'Sep 14', event: 'Inauguration, Problem statement briefing & team kickoff', highlight: true },
-  { day: 'Tuesday', date: 'Sep 15', event: 'Research & initial experimental setup at home institution' },
-  { day: 'Wednesday', date: 'Sep 16', event: 'Progress review & methodology finalization' },
-  { day: 'Thursday', date: 'Sep 17', event: 'WCE lab access: final testing & microstructural evaluation' },
-  { day: 'Friday', date: 'Sep 18', event: 'Jury evaluation, presentations & prize distribution', highlight: true },
-];
-
 // Animation variants
 const fadeInUp = {
   initial: { opacity: 0, y: 30 },
@@ -129,94 +121,55 @@ function LatticeSVG() {
 }
 
 // ─────────────────────────────────────────────────
-// Scientific composition around the specimen — five technical
-// engineering sketches (phase diagram, BCC/FCC lattice, grain
-// boundary, atomic bonds, diffusion path), drawn purely as thin gold
-// line art in a textbook-diagram style — no filled icons, no
-// clipart. Arranged asymmetrically in a loose ring around the
-// specimen and partially connected by thin gold lines; some
-// connections link two elements, others deliberately dangle and
-// terminate in empty space rather than tying everything together.
-// Opacity and a touch of blur scale with implied distance from the
-// specimen, so the composition reads as a subtle scientific frame
-// that rewards a second look rather than competing with the model.
+// Decorative metallurgy illustrations — a handful of small, thin-
+// stroke line drawings (phase diagram, crystal lattice, grain
+// boundary, atomic bonds) placed around the tensile specimen at very
+// low opacity. Deliberately minimal and unconnected — no network
+// mesh, no dots-and-lines linking everything together — so the hero
+// stays clean and keeps its negative space rather than reading as
+// cluttered background decoration.
 // ─────────────────────────────────────────────────
-function HeroConceptComposition() {
+function HeroConceptIllustrations() {
   return (
     <svg
-      className="absolute inset-0 w-full h-full pointer-events-none hidden sm:block"
+      className="absolute inset-0 w-full h-full pointer-events-none opacity-10 hidden sm:block"
       viewBox="0 0 700 600"
       fill="none"
       aria-hidden="true"
     >
-
-      {/* Connecting lines — drawn first, underneath the illustrations.
-          BCC lattice <-> grain boundary is a real connection; the other
-          two are left dangling, terminating in a small open ring rather
-          than reaching another element. */}
-      <g stroke="#ffd166" strokeWidth="0.6">
-        <line x1="130" y1="168" x2="330" y2="118" opacity="0.35" />
-        <line x1="470" y1="130" x2="588" y2="128" opacity="0.35" />
-        <line x1="100" y1="455" x2="185" y2="400" opacity="0.28" />
-        <circle cx="185" cy="400" r="2" opacity="0.32" fill="none" />
-        <line x1="565" y1="480" x2="480" y2="430" opacity="0.28" />
-        <circle cx="480" cy="430" r="2" opacity="0.32" fill="none" />
+      {/* Iron-Carbon phase diagram — bottom-left */}
+      <g transform="translate(110,500)" stroke="#ffd166" strokeWidth="1.1">
+        <line x1="-22" y1="20" x2="-22" y2="-20" />
+        <line x1="-22" y1="20" x2="22" y2="20" />
+        <path d="M -22 4 Q 0 -22 22 -6" fill="none" />
       </g>
 
-      {/* Iron-Carbon phase diagram — bottom-left, farther out */}
-      <g transform="translate(95,470)" stroke="#ffd166" strokeWidth="1.2" opacity="0.28">
-        <line x1="-24" y1="24" x2="-24" y2="-22" />
-        <line x1="-24" y1="24" x2="26" y2="24" />
-        <line x1="-27" y1="18" x2="-24" y2="18" />
-        <line x1="-27" y1="4" x2="-24" y2="4" />
-        <path d="M -24 6 Q -8 -22 20 -8" fill="none" />
-        <line x1="4" y1="24" x2="4" y2="-11" strokeDasharray="1.5 2" strokeWidth="0.6" />
-      </g>
-
-      {/* BCC crystal lattice — top-left, medium distance */}
-      <g transform="translate(120,150)" stroke="#ffd166" strokeWidth="1.2" opacity="0.4">
-        <polygon points="-18,-11 9,-18 27,-5 0,2" fill="none" />
-        <polygon points="-18,11 9,4 27,17 0,24" fill="none" />
-        <line x1="-18" y1="-11" x2="-18" y2="11" />
-        <line x1="9" y1="-18" x2="9" y2="4" />
-        <line x1="27" y1="-5" x2="27" y2="17" />
+      {/* BCC crystal structure — top-left */}
+      <g transform="translate(95,120)" stroke="#ffd166" strokeWidth="1">
+        <polygon points="-17,-11 9,-17 26,-4 0,2" fill="none" />
+        <polygon points="-17,11 9,5 26,18 0,24" fill="none" />
+        <line x1="-17" y1="-11" x2="-17" y2="11" />
+        <line x1="9" y1="-17" x2="9" y2="5" />
+        <line x1="26" y1="-4" x2="26" y2="18" />
         <line x1="0" y1="2" x2="0" y2="24" />
-        <circle cx="-18" cy="-11" r="1.4" fill="#ffd166" stroke="none" />
-        <circle cx="9" cy="-18" r="1.4" fill="#ffd166" stroke="none" />
-        <circle cx="27" cy="-5" r="1.4" fill="#ffd166" stroke="none" />
-        <circle cx="0" cy="2" r="1.4" fill="#ffd166" stroke="none" />
         <circle cx="4.5" cy="3" r="1.6" fill="#ffd166" stroke="none" />
       </g>
 
-      {/* Grain boundary sketch — top-right, closer, slightly stronger opacity */}
-      <g transform="translate(340,105)" stroke="#ffd166" strokeWidth="1.3" opacity="0.48">
-        <path d="M -22 -4 L -4 -18 L 16 -12 L 24 6 L 8 20 L -14 16 Z" fill="none" />
-        <path d="M -4 -18 L 6 -2 L 24 6" fill="none" />
-        <path d="M 6 -2 L -14 16" fill="none" />
-        <path d="M 6 -2 L 8 20" fill="none" />
+      {/* Grain boundary / atomic lattice — bottom-right */}
+      <g transform="translate(600,490)" stroke="#ffd166" strokeWidth="1">
+        <polygon points="0,-20 17,-10 17,10 0,20 -17,10 -17,-10" fill="none" />
+        <polygon points="0,-20 17,-10 0,0 -17,-10" fill="none" opacity="0.6" />
       </g>
 
-      {/* Atomic bonds — molecular structure, right, closest/strongest */}
-      <g transform="translate(600,132)" stroke="#ffd166" strokeWidth="1.3" opacity="0.48">
-        <polygon points="0,-12 10,-6 10,6 0,12 -10,6 -10,-6" fill="none" />
-        <line x1="10" y1="-6" x2="24" y2="-12" />
-        <line x1="10" y1="6" x2="24" y2="10" />
-        <circle cx="0" cy="-12" r="1.5" fill="#ffd166" stroke="none" />
-        <circle cx="10" cy="-6" r="1.5" fill="#ffd166" stroke="none" />
-        <circle cx="10" cy="6" r="1.5" fill="#ffd166" stroke="none" />
-        <circle cx="0" cy="12" r="1.5" fill="#ffd166" stroke="none" />
-        <circle cx="-10" cy="6" r="1.5" fill="#ffd166" stroke="none" />
-        <circle cx="-10" cy="-6" r="1.5" fill="#ffd166" stroke="none" />
-        <circle cx="24" cy="-12" r="1.3" fill="#ffd166" stroke="none" />
-        <circle cx="24" cy="10" r="1.3" fill="#ffd166" stroke="none" />
-      </g>
-
-      {/* Diffusion path / microstructure sketch — bottom-right, farther out */}
-      <g transform="translate(555,455)" stroke="#ffd166" strokeWidth="1.2" opacity="0.28">
-        <path d="M -22 18 Q -4 -4 20 -16" fill="none" strokeDasharray="2 2.5" />
-        <polygon points="20,-16 12,-14 16,-9" fill="#ffd166" stroke="none" />
-        <line x1="-14" y1="10" x2="-9" y2="4" strokeWidth="0.5" />
-        <line x1="0" y1="1" x2="4" y2="-5" strokeWidth="0.5" />
+      {/* Atomic bonds — small molecule, top-right */}
+      <g stroke="#ffd166" strokeWidth="1">
+        <line x1="605" y1="140" x2="588" y2="123" />
+        <line x1="605" y1="140" x2="624" y2="127" />
+        <line x1="605" y1="140" x2="611" y2="160" />
+        <circle cx="605" cy="140" r="2.8" fill="#ffd166" stroke="none" />
+        <circle cx="588" cy="123" r="2" fill="#ffd166" stroke="none" />
+        <circle cx="624" cy="127" r="2" fill="#ffd166" stroke="none" />
+        <circle cx="611" cy="160" r="2" fill="#ffd166" stroke="none" />
       </g>
     </svg>
   );
@@ -228,7 +181,7 @@ function HeroConceptComposition() {
 function MaterialsIllustration() {
   return (
     <div className="relative w-full h-[420px] sm:h-[480px] lg:h-[540px]">
-      <HeroConceptComposition />
+      <HeroConceptIllustrations />
       <HeroCrystalLattice />
     </div>
   );
@@ -295,7 +248,7 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    Sep 14–18, 2026
+                    3 Aug – 19 Sep, 2026
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -323,7 +276,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div>
                 <p className="text-caption text-gold-400 mb-1">Event Begins In</p>
-                <p className="text-sm text-metal-400">Monday, September 14, 2026 · 09:00 AM IST</p>
+                <p className="text-sm text-metal-400">Friday, September 18, 2026 · 08:00 AM IST</p>
               </div>
               <CountdownTimer />
             </div>
@@ -415,40 +368,40 @@ export default function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div {...fadeInUp} className="text-center mb-12">
             <span className="section-label text-gold-400">Event Schedule</span>
-            <h2 className="text-headline text-white mb-4">A Week of Discovery</h2>
+            <h2 className="text-headline text-white mb-4">From Publicity to Prize Distribution</h2>
             <p className="text-body-lg text-metal-400 max-w-xl mx-auto">
-              Five intense days from Monday kickoff through Friday jury evaluation and prize distribution.
+              Seven phases from early August through the prize distribution ceremony on 19 September 2026.
             </p>
           </motion.div>
 
           <div className="max-w-2xl mx-auto">
-            {TIMELINE_PREVIEW.map((item, i) => (
+            {EVENT_PHASES.map((phase, i) => (
               <motion.div
-                key={item.day}
+                key={phase.number}
                 {...fadeInUp}
                 className="flex gap-4 mb-0"
               >
                 <div className="flex flex-col items-center">
                   <div className={cn(
                     'w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 z-10',
-                    item.highlight
+                    phase.highlight
                       ? 'bg-gold-500 text-navy-950'
                       : 'bg-white/10 text-metal-300'
                   )}>
-                    {i + 1}
+                    {phase.number}
                   </div>
-                  {i < TIMELINE_PREVIEW.length - 1 && (
+                  {i < EVENT_PHASES.length - 1 && (
                     <div className="w-px flex-1 bg-white/10 my-1" />
                   )}
                 </div>
-                <div className={cn('pb-8', item.highlight && 'pb-8')}>
+                <div className="pb-8">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={cn('text-sm font-bold', item.highlight ? 'text-gold-400' : 'text-white')}>
-                      {item.day}
+                    <span className={cn('text-sm font-bold', phase.highlight ? 'text-gold-400' : 'text-white')}>
+                      {phase.title}
                     </span>
-                    <span className="text-xs text-metal-500">· {item.date}</span>
+                    <span className="text-xs text-metal-500">· {phase.dateRange}</span>
                   </div>
-                  <p className="text-sm text-metal-400 leading-relaxed">{item.event}</p>
+                  <p className="text-sm text-metal-400 leading-relaxed">{phase.description}</p>
                 </div>
               </motion.div>
             ))}

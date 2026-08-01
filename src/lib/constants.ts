@@ -3,7 +3,7 @@
 // ============================================================
 
 // Event start date/time — edit this single constant to update all countdown timers
-export const EVENT_START_DATE = new Date('2026-09-14T09:00:00+05:30'); // Monday 09:00 AM IST
+export const EVENT_START_DATE = new Date('2026-09-18T08:00:00+05:30'); // Friday 08:00 AM IST
 export const EVENT_END_DATE = new Date('2026-09-18T17:00:00+05:30'); // Friday 5:00 PM IST
 
 // Teams can edit their own registration details (members, mentor, college, etc.)
