@@ -290,7 +290,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
               { label: 'Registered Teams', value: stats.total, suffix: '+' },
-              { label: 'Problem Tracks', value: 5, suffix: '' },
+              { label: 'Problem Tracks', value: 10, suffix: '' },
               { label: 'Verified Teams', value: stats.verified, suffix: '' },
               { label: 'Pending Review', value: stats.pending, suffix: '' },
             ].map((stat) => (
