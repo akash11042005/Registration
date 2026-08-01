@@ -30,8 +30,7 @@
   }
 
   ::selection {
-    background-color: rgba(30, 36, 96, 0.15);
-    color: #1e2460;
+    background-color: rgba(255, 189, 89, 0.35);
   }
 
   ::-webkit-scrollbar {
@@ -211,7 +210,7 @@
   }
 
   .gradient-navy {
-    background: linear-gradient(135deg, #151a40 0%, #0f1230 100%);
+    background: linear-gradient(90deg, #2d35a4 0%, #1e2460 55%, #0f1230 100%);
   }
 
   .lattice-bg {
