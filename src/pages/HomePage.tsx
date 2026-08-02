@@ -21,6 +21,7 @@ import AnimatedCounter from '@/components/AnimatedCounter';
 import { useRegistrationStats } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import { EVENT_PHASES } from '@/lib/timeline';
+import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 const RULES_HIGHLIGHTS = [
@@ -248,11 +249,11 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    18th & 19th Sep, 2026
+                    3 Aug – 19 Sep, 2026
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    Open to all second year Engineering Students
+                    Open to all 2nd 3rd year Engineering Students.
                   </span>
                 </div>
               </motion.div>
@@ -287,12 +288,11 @@ export default function HomePage() {
       {/* ── Stats ── */}
       <section className="bg-white border-b border-metal-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
               { label: 'Registered Teams', value: stats.total, suffix: '+' },
-              { label: 'Problem Tracks', value: 10, suffix: '' },
-              { label: 'Verified Teams', value: stats.verified, suffix: '' },
-              { label: 'Pending Review', value: stats.pending, suffix: '' },
+              { label: 'Problem Tracks', value: PROBLEM_STATEMENTS.length, suffix: '' },
+              { label: 'Vacant Seats', value: Math.max(0, PROBLEM_STATEMENTS.length * MAX_TEAMS_PER_TASK - stats.total), suffix: '' },
             ].map((stat) => (
               <motion.div key={stat.label} {...fadeInUp} className="text-center">
                 <p className="text-headline text-navy-900 mb-1">
