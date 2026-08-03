@@ -135,52 +135,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const holdRef = holdId ? db.collection('slotHolds').doc(holdId) : null;
     const paymentRef = db.collection('payments').doc(razorpay_payment_id);
     const userRef = db.collection('users').doc(registration.uid);
-
     try {
-        // ── Step 3a: double-submit guard — same payment ID replayed (retry safety) ──
-        const dupe = await registrationsRef.where('razorpayPaymentId', '==', razorpay_payment_id).limit(1).get();
-        if (!dupe.empty) {
-            const existing = dupe.docs[0].data();
-            return res.status(200).json({ ...existing, id: dupe.docs[0].id });
-        }
-
-        // ── Step 3b: one-registration-per-user guard — a DIFFERENT payment from
-        // a uid that already has a registration. Nothing before this stopped
-        // someone from completing a second, entirely separate payment and
-        // ending up with two registrations. Since money was genuinely taken
-        // here, this is never silently rejected — it's flagged the same way
-        // an after-capacity payment is, for a manual refund/merge decision. ──
-        const existingForUid = await registrationsRef.where('uid', '==', registration.uid).limit(1).get();
-        if (!existingForUid.empty) {
-            await db.collection('payment_issues').add({
-                reason: 'duplicate_registration_attempt',
-                razorpayOrderId: razorpay_order_id,
-                razorpayPaymentId: razorpay_payment_id,
-                registration,
-                totalFee,
-                existingRegistrationId: existingForUid.docs[0].id,
-                createdAt: FieldValue.serverTimestamp(),
-            });
-            return res.status(409).json({
-                error: 'You already have a registration on file. This payment was received but a second registration was not created — our team will contact you about a refund. Please note your Payment ID: ' + razorpay_payment_id,
-            });
-        }
-
         const createdAtIso = new Date().toISOString();
 
         // Everything except registrationId, which depends on the atomic
         // team-count read below and so is filled in inside the transaction.
         const baseDocData = {
-            teamName: registration.teamName,
-            leaderName: registration.leaderName,
-            leaderEmail: registration.leaderEmail,
-            leaderPhone: registration.leaderPhone,
-            collegeName: registration.collegeName,
-            member1Name: registration.member1Name || null,
-            member2Name: registration.member2Name || null,
-            mentorName: registration.mentorName || null,
-            mentorEmail: registration.mentorEmail || null,
-            mentorPhone: registration.mentorPhone || null,
+            teamName: registration.teamName.trim(),
+            leaderName: registration.leaderName.trim(),
+            leaderEmail: registration.leaderEmail.trim(),
+            leaderPhone: registration.leaderPhone.trim(),
+            collegeName: registration.collegeName.trim(),
+            member1Name: registration.member1Name?.trim() || null,
+            member2Name: registration.member2Name?.trim() || null,
+            mentorName: registration.mentorName?.trim() || null,
+            mentorEmail: registration.mentorEmail?.trim() || null,
+            mentorPhone: registration.mentorPhone?.trim() || null,
             taskId: registration.taskId,
             taskTitle: registration.taskTitle,
             transactionId: razorpay_payment_id,
@@ -194,26 +164,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             createdAtServer: FieldValue.serverTimestamp(),
         };
 
-        // ── Step 4: capacity check + team-ID assignment + registration creation +
-        // hold consumption + payment record + user profile update, all inside
-        // one transaction — this is what makes the team ID race-condition-safe ──
+        // ── Step 4: atomic transaction — checks payment duplicate, single registration, capacity, team-ID assignment, registration creation, hold consumption, payment record, user profile update ──
         const newRegRef = registrationsRef.doc();
         let finalDocData: typeof baseDocData & { registrationId: string } = { ...baseDocData, registrationId: '' };
 
         const result = await db.runTransaction(async (tx) => {
+            // Check 4a: double-submit guard — same payment ID replayed
+            const existingPaymentSnap = await tx.get(paymentRef);
+            if (existingPaymentSnap.exists) {
+                const payData = existingPaymentSnap.data();
+                if (payData?.teamId) {
+                    const regSnap = await tx.get(registrationsRef.doc(payData.teamId));
+                    if (regSnap.exists) {
+                        return { type: 'duplicate_payment' as const, registration: { id: regSnap.id, ...regSnap.data() } };
+                    }
+                }
+            }
+
+            // Check 4b: one-registration-per-user guard inside transaction
+            const userSnap = await tx.get(userRef);
+            const userData = userSnap.exists ? userSnap.data() : {};
+            if (userData?.registrationStatus === 'registered' && userData?.teamId) {
+                return { type: 'duplicate_user_reg' as const, existingRegistrationId: userData.teamId };
+            }
+
             const countSnap = await tx.get(taskCountRef);
             const countData = countSnap.exists ? (countSnap.data() as { count?: number }) : {};
             const confirmed = countData.count || 0;
 
             if (confirmed >= MAX_TEAMS_PER_TASK) {
-                return { full: true };
+                return { type: 'full' as const };
             }
 
             // Team ID format: PS<task, 2 digits><team number within that task, 2 digits>
-            // e.g. PS0701 = Problem Statement 7, Team 1. The team number is exactly
-            // "how many teams were already confirmed for this task" + 1 — reading
-            // it inside this same transaction is what guarantees two concurrent
-            // registrations for the same task can never be assigned the same number.
             const teamNumber = confirmed + 1;
             const regId = `PS${String(registration.taskId).padStart(2, '0')}${String(teamNumber).padStart(2, '0')}`;
             const docData = { ...baseDocData, registrationId: regId };
@@ -233,9 +216,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 tx.set(taskCountRef, { held: FieldValue.increment(-1) }, { merge: true });
             }
 
-            // Dedicated payments collection — a separate audit-trail record from
-            // the registration itself, so payment history survives independently
-            // of whatever happens to the registration later (e.g. admin rejection).
+            // Dedicated payments collection
             tx.set(paymentRef, {
                 paymentId: razorpay_payment_id,
                 transactionId: razorpay_payment_id,
@@ -254,9 +235,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 createdAtServer: FieldValue.serverTimestamp(),
             });
 
-            // Denormalize the now-known phone/college onto the user's profile doc,
-            // and mark them as registered — users/{uid} is created at sign-up time
-            // (see src/lib/ensureUserDoc.ts) with these fields still null/'not_registered'.
+            // Denormalize profile doc
             tx.set(userRef, {
                 phone: registration.leaderPhone,
                 collegeName: registration.collegeName,
@@ -264,10 +243,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 teamId: newRegRef.id,
             }, { merge: true });
 
-            return { full: false };
+            return { type: 'success' as const };
         });
 
-        if (result.full) {
+        if (result.type === 'duplicate_payment') {
+            return res.status(200).json(result.registration);
+        }
+
+        if (result.type === 'duplicate_user_reg') {
+            await db.collection('payment_issues').add({
+                reason: 'duplicate_registration_attempt',
+                razorpayOrderId: razorpay_order_id,
+                razorpayPaymentId: razorpay_payment_id,
+                registration,
+                totalFee,
+                existingRegistrationId: result.existingRegistrationId,
+                createdAt: FieldValue.serverTimestamp(),
+            });
+            return res.status(409).json({
+                error: 'You already have a registration on file. This payment was received but a second registration was not created — our team will contact you about a refund. Please note your Payment ID: ' + razorpay_payment_id,
+            });
+        }
+
+        if (result.type === 'full') {
             // Payment already succeeded — don't lose it silently. Flag for manual admin follow-up.
             await db.collection('payment_issues').add({
                 reason: 'task_full_after_payment',

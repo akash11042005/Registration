@@ -7,6 +7,8 @@
 // ============================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Razorpay from 'razorpay';
+import { getAdminDb } from '../_lib/firebaseadmin.js';
+import { checkRateLimit, getCallerIp } from '../_lib/rateLimit.js';
 
 // Keep these in sync with src/lib/constants.ts
 const BASE_REGISTRATION_FEE = 1; // TEMPORARY for testing — real price is ₹300. Restore to 300 before the real event.
@@ -26,6 +28,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const db = getAdminDb();
+    const callerIp = getCallerIp(req);
+    const allowed = await checkRateLimit(db, `create-order:${callerIp}`, 10, 60 * 1000);
+    if (!allowed) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a minute before creating another payment order.' });
+    }
+
     const { wantsHomeDelivery } = (req.body || {}) as { wantsHomeDelivery?: boolean };
     const totalFee = BASE_REGISTRATION_FEE + (wantsHomeDelivery ? HOME_DELIVERY_ADDON_FEE : 0);
 

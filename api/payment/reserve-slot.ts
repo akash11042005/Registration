@@ -28,9 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { taskId, uid } = (req.body || {}) as { taskId?: number; uid?: string };
-    if (typeof taskId !== 'number' || !uid) {
-        return res.status(400).json({ error: 'Missing taskId or uid' });
+    const { taskId, uid: rawUid } = (req.body || {}) as { taskId?: number; uid?: string };
+    const uid = typeof rawUid === 'string' ? rawUid.trim() : '';
+
+    if (typeof taskId !== 'number' || taskId <= 0 || !Number.isInteger(taskId) || !uid) {
+        return res.status(400).json({ error: 'Missing or invalid taskId or uid' });
     }
 
     const authResult = await verifyCallerUid(req, uid);
@@ -49,10 +51,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const holdsRef = db.collection('slotHolds');
 
     try {
-        // ── Step 1: lazily expire this task's stale holds (best-effort, not transactional) ──
-        // Firestore's own TTL deletion can take up to 24h, so we can't rely on documents
-        // actually being gone — instead we look them up and clean up opportunistically
-        // whenever anyone tries to reserve or check this task.
+        // ── Step 1: lazily expire this task's stale holds (best-effort, transactional verification) ──
+        // Reads stale holds outside transaction, then inside the transaction verifies if each hold
+        // document still exists before deleting and counting towards held decrement to prevent counter drift.
         const now = Date.now();
         const staleHolds = await holdsRef
             .where('taskId', '==', taskId)
@@ -61,25 +62,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (!staleHolds.empty) {
             await db.runTransaction(async (tx) => {
-                const countSnap = await tx.get(taskCountRef);
-                const currentHeld = countSnap.exists ? (countSnap.data() as { held?: number }).held || 0 : 0;
-                // Clamp at 0 — never let stale-hold cleanup push the counter negative,
-                // e.g. from leftover holds that predate this cleanup logic existing.
-                const clampedHeld = Math.max(0, currentHeld - staleHolds.size);
-                staleHolds.docs.forEach((d) => tx.delete(d.ref));
-                tx.set(taskCountRef, { taskId, held: clampedHeld }, { merge: true });
+                let deletedCount = 0;
+                for (const d of staleHolds.docs) {
+                    const snap = await tx.get(d.ref);
+                    if (snap.exists) {
+                        tx.delete(d.ref);
+                        deletedCount++;
+                    }
+                }
+                if (deletedCount > 0) {
+                    const countSnap = await tx.get(taskCountRef);
+                    const currentHeld = countSnap.exists ? (countSnap.data() as { held?: number }).held || 0 : 0;
+                    const clampedHeld = Math.max(0, currentHeld - deletedCount);
+                    tx.set(taskCountRef, { taskId, held: clampedHeld }, { merge: true });
+                }
             }).catch(() => {
                 // Non-fatal — worst case an expired hold lingers an extra request cycle.
             });
         }
 
         // ── Step 2: reuse an existing active hold for this uid+task if one exists ──
-        // Prevents a double-click, a retry, or a scripted flood from the same
-        // user stacking up multiple holds and eating into the real 8-slot cap.
-        // This is a plain query (not part of the transaction below — Firestore
-        // transactions can't run arbitrary queries) so there's a narrow race if
-        // the exact same uid fires two requests in the same instant; harmless
-        // here since it's a UX courtesy layer, not the security boundary.
         const now2 = Date.now();
         const existingHold = await holdsRef
             .where('taskId', '==', taskId)
@@ -103,7 +105,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const held = Math.max(0, data.held || 0);
 
             if (confirmed + held >= MAX_TEAMS_PER_TASK) {
-                return { full: true };
+                return { full: true as const };
             }
 
             const holdRef = holdsRef.doc();
@@ -111,7 +113,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             tx.set(holdRef, { taskId, uid, createdAt: FieldValue.serverTimestamp(), expiresAt });
             tx.set(taskCountRef, { taskId, held: FieldValue.increment(1) }, { merge: true });
 
-            return { full: false, holdId: holdRef.id, expiresAt };
+            return { full: false as const, holdId: holdRef.id, expiresAt };
         });
 
         if (result.full) {
