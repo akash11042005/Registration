@@ -253,7 +253,7 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    Open to all 2nd 3rd year Engineering Students.
+                    Open to all second year Engineering Students
                   </span>
                 </div>
               </motion.div>
@@ -407,11 +407,6 @@ export default function HomePage() {
             ))}
           </div>
 
-          <div className="text-center mt-4">
-            <Link to="/timeline" className="btn-outline border-white/20 text-white hover:bg-white/10 hover:text-white">
-              Full Schedule <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </div>
       </section>
 
