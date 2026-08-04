@@ -1,8 +1,19 @@
 {
-    "rewrites": [
+  "rewrites": [
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
         {
-            "source": "/((?!api/).*)",
-            "destination": "/index.html"
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
         }
-    ]
+      ]
+    }
+  ]
 }
