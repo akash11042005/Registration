@@ -6,7 +6,13 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+  GoogleAuthProvider,
+  type AuthError,
+  type AuthCredential,
 } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { ADMIN_EMAILS } from '@/lib/constants';
@@ -18,6 +24,15 @@ export interface AppUser {
   displayName?: string;
   photoURL?: string;
   role?: string;
+  emailVerified?: boolean;
+}
+
+// Populated when signInWithGoogle hits auth/account-exists-with-different-credential
+// for an email that already has a password-based account. Holds what's needed to
+// finish linking the two providers into a single uid once the user confirms their
+// existing password (see linkPendingGoogleAccount below).
+export interface PendingGoogleLink {
+  email: string;
 }
 
 interface AuthContextType {
@@ -32,6 +47,12 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   authError: string | null;
   clearAuthError: () => void;
+  // Duplicate-account (email/password vs. Google) handling:
+  pendingGoogleLink: PendingGoogleLink | null;
+  linkPendingGoogleAccount: (password: string) => Promise<AppUser>;
+  cancelPendingGoogleLink: () => void;
+  // Email verification:
+  resendVerificationEmail: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -50,6 +71,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [pendingGoogleLink, setPendingGoogleLink] = useState<PendingGoogleLink | null>(null);
+  // Kept in a ref (not state) purely as a stash for the AuthCredential object between
+  // the failed signInWithPopup attempt and the follow-up linkPendingGoogleAccount call —
+  // it's not serializable/renderable, so it doesn't belong in React state.
+  const pendingGoogleCredRef = React.useRef<AuthCredential | null>(null);
 
   const isAdmin = !!user && (ADMIN_EMAILS.includes((user.email ?? '').toLowerCase()) || user.role === 'admin');
 
@@ -62,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: firebaseUser.email || '',
           displayName: firebaseUser.displayName || '',
           photoURL: firebaseUser.photoURL || undefined,
+          emailVerified: firebaseUser.emailVerified,
         };
         setUser(u);
         localStorage.setItem(USER_KEY, JSON.stringify(u));
@@ -82,20 +109,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async (): Promise<AppUser> => {
     try {
       setAuthError(null);
+      setPendingGoogleLink(null);
+      pendingGoogleCredRef.current = null;
       const res = await signInWithPopup(auth, googleProvider);
       const u: AppUser = {
         uid: res.user.uid,
         email: res.user.email || '',
         displayName: res.user.displayName || '',
         photoURL: res.user.photoURL || undefined,
+        emailVerified: res.user.emailVerified,
       };
       setUser(u);
       localStorage.setItem(USER_KEY, JSON.stringify(u));
       await ensureUserDoc(u);
       return u;
     } catch (err: unknown) {
+      const fbErr = err as AuthError;
+
+      // This is the duplicate-account case: an email/password account already
+      // exists for this Gmail address, so instead of letting Firebase silently
+      // create a second uid for the Google credential, we stop and ask the
+      // user to confirm their existing password so we can link the two
+      // providers onto the SAME uid (see linkPendingGoogleAccount below).
+      if (fbErr.code === 'auth/account-exists-with-different-credential') {
+        const email = (fbErr.customData as { email?: string } | undefined)?.email;
+        const cred = GoogleAuthProvider.credentialFromError(fbErr);
+
+        if (email && cred) {
+          try {
+            const methods = await fetchSignInMethodsForEmail(auth, email);
+            if (methods.includes('password')) {
+              pendingGoogleCredRef.current = cred;
+              setPendingGoogleLink({ email });
+              setAuthError(
+                `An account with ${email} already exists using a password. Enter that password to link your Google account — no new account will be created.`
+              );
+              throw new Error('account-exists-needs-link');
+            }
+          } catch (lookupErr) {
+            if (lookupErr instanceof Error && lookupErr.message === 'account-exists-needs-link') throw lookupErr;
+            // fetchSignInMethodsForEmail itself failed — fall through to generic handling below
+          }
+        }
+      }
+
       const msg = err instanceof Error ? err.message : 'Google sign-in failed';
-      if (msg.includes('operation-not-allowed') || msg.includes('auth/configuration-not-found')) {
+      if (msg === 'account-exists-needs-link') {
+        // authError already set above with the specific linking instructions
+      } else if (msg.includes('operation-not-allowed') || msg.includes('auth/configuration-not-found')) {
         setAuthError('Google sign-in is not enabled in this Firebase project. Please use email/password.');
       } else if (msg.includes('popup-closed')) {
         setAuthError('Sign-in popup was closed. Please try again.');
@@ -104,6 +165,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       throw err;
     }
+  };
+
+  // Step 2 of the duplicate-account fix: called (e.g. from a small password
+  // prompt shown when pendingGoogleLink is set) once the user re-enters the
+  // password for their existing email/password account. Signs into that
+  // existing uid, then attaches the stashed Google credential to it, so the
+  // account ends up with BOTH providers on a single uid instead of two uids.
+  const linkPendingGoogleAccount = async (password: string): Promise<AppUser> => {
+    if (!pendingGoogleLink || !pendingGoogleCredRef.current) {
+      throw new Error('No pending Google account link to complete.');
+    }
+    setAuthError(null);
+    try {
+      const { email } = pendingGoogleLink;
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      await linkWithCredential(credential.user, pendingGoogleCredRef.current);
+
+      const u: AppUser = {
+        uid: credential.user.uid,
+        email: credential.user.email || '',
+        displayName: credential.user.displayName || '',
+        photoURL: credential.user.photoURL || undefined,
+        emailVerified: credential.user.emailVerified,
+      };
+      setUser(u);
+      localStorage.setItem(USER_KEY, JSON.stringify(u));
+      await ensureUserDoc(u);
+      setPendingGoogleLink(null);
+      pendingGoogleCredRef.current = null;
+      return u;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not link Google account';
+      if (msg.includes('wrong-password') || msg.includes('invalid-credential')) {
+        setAuthError('Incorrect password. Please try again.');
+      } else {
+        setAuthError(msg);
+      }
+      throw err;
+    }
+  };
+
+  const cancelPendingGoogleLink = () => {
+    setPendingGoogleLink(null);
+    pendingGoogleCredRef.current = null;
+    setAuthError(null);
   };
 
   const signInWithEmail = async (email: string, password: string): Promise<AppUser> => {
@@ -136,6 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         uid: credential.user.uid,
         email: credential.user.email || '',
         displayName: credential.user.displayName || '',
+        emailVerified: credential.user.emailVerified,
       };
       setUser(u);
       localStorage.setItem(USER_KEY, JSON.stringify(u));
@@ -154,6 +261,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUpWithEmail = async (email: string, password: string, displayName: string): Promise<AppUser> => {
     setAuthError(null);
+
+    // 0. Duplicate-account guard: if this email already signed up via Google,
+    // block the password signup here rather than letting Firebase create a
+    // second, disconnected uid for the same person.
+    try {
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length > 0 && !methods.includes('password')) {
+        setAuthError(
+          `An account with ${email} already exists via Google sign-in. Please use "Continue with Google" instead.`
+        );
+        throw new Error('email-exists-google-only');
+      }
+    } catch (checkErr) {
+      if (checkErr instanceof Error && checkErr.message === 'email-exists-google-only') throw checkErr;
+      // Lookup itself failed (e.g. offline) — don't block signup on that, fall through as normal
+    }
+
     // 1. Try Backend API Database Server (if one is deployed alongside the app)
     try {
       const res = await fetch('/api/auth/signup', {
@@ -182,10 +306,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (displayName) {
         await updateProfile(credential.user, { displayName });
       }
+      try {
+        await sendEmailVerification(credential.user);
+      } catch (verifyErr) {
+        // Don't block account creation if the verification email fails to send —
+        // the user can retry via resendVerificationEmail() from the dashboard.
+        console.warn('Could not send verification email:', verifyErr);
+      }
       const u: AppUser = {
         uid: credential.user.uid,
         email: credential.user.email || '',
         displayName: displayName || credential.user.displayName || '',
+        emailVerified: credential.user.emailVerified,
       };
       setUser(u);
       localStorage.setItem(USER_KEY, JSON.stringify(u));
@@ -225,6 +357,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearAuthError = () => setAuthError(null);
 
+  // Called from TeamDashboardPage's "Resend verification email" button when
+  // user.emailVerified is false. Uses auth.currentUser directly (not the local
+  // `user` state) since it needs the live Firebase User object to call the SDK.
+  const resendVerificationEmail = async () => {
+    if (!auth.currentUser) {
+      throw new Error('No signed-in user to send a verification email to.');
+    }
+    try {
+      setAuthError(null);
+      await sendEmailVerification(auth.currentUser);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not send verification email';
+      if (msg.includes('too-many-requests')) {
+        setAuthError('Too many requests — please wait a bit before trying again.');
+      } else {
+        setAuthError(msg);
+      }
+      throw err;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -238,6 +391,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resetPassword,
       authError,
       clearAuthError,
+      pendingGoogleLink,
+      linkPendingGoogleAccount,
+      cancelPendingGoogleLink,
+      resendVerificationEmail,
     }}>
       {children}
     </AuthContext.Provider>

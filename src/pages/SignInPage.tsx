@@ -21,7 +21,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function SignInPage() {
-  const { signInWithEmail, signInWithGoogle, authError, clearAuthError, loading } = useAuth();
+  const { signInWithEmail, signInWithGoogle, authError, clearAuthError, loading, pendingGoogleLink, linkPendingGoogleAccount, cancelPendingGoogleLink } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -57,6 +57,9 @@ export default function SignInPage() {
       const signedInUser = await signInWithGoogle();
       navigate(destinationFor(signedInUser.email), { replace: true });
     } catch {
+      // If the Google sign-in stopped because a password account already
+      // exists for this email, `pendingGoogleLink` is now set and the
+      // LinkGoogleAccountModal below will render to collect the password.
     } finally {
       setGoogleLoading(false);
     }
@@ -179,8 +182,92 @@ export default function SignInPage() {
             sent={resetSent}
           />
         )}
+
+        {/* Duplicate-account modal: shown when Google sign-in found an
+            existing password account for the same email. Confirming the
+            password here links Google to that SAME account instead of
+            creating a second one. */}
+        {pendingGoogleLink && (
+          <LinkGoogleAccountModal
+            email={pendingGoogleLink.email}
+            onCancel={cancelPendingGoogleLink}
+            onLink={async (password) => {
+              const linkedUser = await linkPendingGoogleAccount(password);
+              navigate(destinationFor(linkedUser.email), { replace: true });
+            }}
+          />
+        )}
       </div>
     </PageTransition>
+  );
+}
+
+function LinkGoogleAccountModal({
+  email,
+  onCancel,
+  onLink,
+}: {
+  email: string;
+  onCancel: () => void;
+  onLink: (password: string) => Promise<void>;
+}) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErr('');
+    try {
+      await onLink(password);
+    } catch {
+      setErr('Incorrect password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-navy-950/60" onClick={onCancel} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative bg-white rounded-2xl p-6 w-full max-w-sm shadow-elevated"
+      >
+        <h2 className="font-bold text-navy-900 mb-2">Link Your Google Account</h2>
+        <p className="text-sm text-metal-600 mb-4">
+          An account with <span className="font-semibold">{email}</span> already exists using a password.
+          Enter that password to link your Google account — no new account will be created.
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {err && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+              {err}
+            </div>
+          )}
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-metal-400" />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Existing password"
+              autoComplete="current-password"
+              className="form-input pl-10"
+              required
+              autoFocus
+            />
+          </div>
+          <button type="submit" disabled={loading || !password} className="btn-primary w-full justify-center">
+            {loading ? 'Linking…' : 'Link Account & Sign In'}
+          </button>
+          <button type="button" onClick={onCancel} className="btn-ghost w-full justify-center">Cancel</button>
+        </form>
+      </motion.div>
+    </div>
   );
 }
 
