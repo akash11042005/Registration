@@ -249,11 +249,11 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    3 Aug – 19 Sep, 2026
+                    18 &amp; 19 Sep, 2026
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                    Open to all second year Engineering Students
+                    Open to all 2nd and 3rd year Engineering Students
                   </span>
                 </div>
               </motion.div>
