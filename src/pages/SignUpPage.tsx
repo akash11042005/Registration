@@ -4,13 +4,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, Eye, EyeOff, AlertCircle, UserPlus, Globe } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus, Globe } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const schema = z.object({
-  displayName: z.string().min(2, 'Full name is required'),
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirmPassword: z.string(),
@@ -38,7 +37,11 @@ export default function SignUpPage() {
   const onSubmit = async (data: FormData) => {
     try {
       clearAuthError();
-      await signUpWithEmail(data.email, data.password, data.displayName);
+      // No name field on this form anymore — fall back to the email's local
+      // part as a placeholder displayName (can be edited later from the
+      // team dashboard once actual team details are registered).
+      const fallbackName = data.email.split('@')[0];
+      await signUpWithEmail(data.email, data.password, fallbackName);
       navigate(fromPath, { replace: true });
     } catch { }
   };
@@ -98,23 +101,7 @@ export default function SignUpPage() {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="form-label" htmlFor="displayName">Team Leader's Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-metal-400" />
-                  <input
-                    {...register('displayName')}
-                    id="displayName"
-                    type="text"
-                    autoComplete="name"
-                    className={cn('form-input pl-10', errors.displayName && 'border-red-400')}
-                    placeholder="Team Leader's Name"
-                  />
-                </div>
-                {errors.displayName && <p className="form-error"><AlertCircle className="w-3 h-3" />{errors.displayName.message}</p>}
-              </div>
-
-              <div>
-                <label className="form-label" htmlFor="email">College Email</label>
+                <label className="form-label" htmlFor="email">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-metal-400" />
                   <input
