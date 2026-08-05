@@ -18,7 +18,7 @@ import {
 import PageTransition from '@/components/PageTransition';
 import CountdownTimer from '@/components/CountdownTimer';
 import AnimatedCounter from '@/components/AnimatedCounter';
-import { useRegistrationStats } from '@/hooks/useFirestore';
+import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import { EVENT_PHASES } from '@/lib/timeline';
 import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
@@ -192,7 +192,15 @@ function MaterialsIllustration() {
 // Home page
 // ─────────────────────────────────────────────────
 export default function HomePage() {
-  const stats = useRegistrationStats();
+  // Public homepage stats must be derived from `taskCounts` (Firestore rule:
+  // read: if true) rather than the raw `registrations` collection, which
+  // only admins — or a user reading their own single doc — are allowed to
+  // list. Querying `registrations` directly here was the cause of "Registered
+  // Teams" / "Vacant Seats" showing correct numbers for an admin session but
+  // silently falling back to 0 / full-vacancy for every other visitor, since
+  // the permission-denied error was swallowed and `data` defaulted to [].
+  const taskCounts = useTaskRegistrationCounts();
+  const registeredTeams = Object.values(taskCounts).reduce((sum, n) => sum + (n || 0), 0);
 
   return (
     <PageTransition>
@@ -290,9 +298,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
-              { label: 'Registered Teams', value: stats.total, suffix: '+' },
+              { label: 'Registered Teams', value: registeredTeams, suffix: '+' },
               { label: 'Problem Tracks', value: PROBLEM_STATEMENTS.length, suffix: '' },
-              { label: 'Vacant Seats', value: Math.max(0, PROBLEM_STATEMENTS.length * MAX_TEAMS_PER_TASK - stats.total), suffix: '' },
+              { label: 'Vacant Seats', value: Math.max(0, PROBLEM_STATEMENTS.length * MAX_TEAMS_PER_TASK - registeredTeams), suffix: '' },
             ].map((stat) => (
               <motion.div key={stat.label} {...fadeInUp} className="text-center">
                 <p className="text-headline text-navy-900 mb-1">

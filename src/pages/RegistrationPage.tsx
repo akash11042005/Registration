@@ -68,6 +68,19 @@ export default function RegistrationPage() {
 
   const taskCounts = useTaskRegistrationCounts();
   const { data: existingRegistration, isLoading: checkingExistingRegistration } = useRegistrationByUid(user?.uid);
+  const qc = useQueryClient();
+
+  // Self-heal stale/abandoned slot holds on mount — mirrors the same call in
+  // ProblemStatementsPage.tsx. Without this, a user who lands directly on
+  // /register (skipping the problem-statements browse page) could see a task
+  // shown as full/near-full because of an abandoned checkout's expired hold
+  // that nothing has reconciled yet, wrongly blocking or discouraging them
+  // from a task that actually still has room.
+  useEffect(() => {
+    fetch('/api/payment/cleanup-stale-holds', { method: 'POST' })
+      .then(() => qc.invalidateQueries({ queryKey: ['taskCounts'] }))
+      .catch(() => { });
+  }, [qc]);
 
   // A signed-in user who already has a registration shouldn't be able to pay
   // again and end up with a second one — send them to their dashboard instead.
@@ -85,7 +98,6 @@ export default function RegistrationPage() {
   const [activeHold, setActiveHold] = useState<{ holdId: string; expiresAt: number } | null>(null);
   const [holdSecondsLeft, setHoldSecondsLeft] = useState<number | null>(null);
   const activeHoldRef = useRef<{ holdId: string; expiresAt: number } | null>(null);
-  const qc = useQueryClient();
   const [completedRegistration, setCompletedRegistration] = useState<Registration | null>(null);
 
   // Form states
@@ -145,41 +157,6 @@ export default function RegistrationPage() {
   const wantsHomeDelivery = step2Form.watch('wantsHomeDelivery');
 
   const totalFee = BASE_REGISTRATION_FEE + (wantsHomeDelivery ? HOME_DELIVERY_ADDON_FEE : 0);
-
-  // Require auth to start
-  if (!user) {
-    return (
-      <PageTransition>
-        <div className="min-h-screen flex items-center justify-center bg-metal-50 px-4 py-20">
-          <div className="card p-8 max-w-md text-center">
-            <div className="w-14 h-14 rounded-2xl bg-navy-50 flex items-center justify-center mx-auto mb-4 text-navy-900">
-              <ShieldCheck className="w-7 h-7" />
-            </div>
-            <h2 className="text-title text-navy-900 mb-2">Authentication Required</h2>
-            <p className="text-sm text-metal-600 mb-6">
-              Please sign in or create an account to start your team registration for AAYODHYAM 2026.
-            </p>
-            <div className="flex flex-col gap-3">
-              <Link
-                to="/signin"
-                state={{ from: { pathname: '/register', search: defaultTaskId ? `?task=${defaultTaskId}` : '' } }}
-                className="btn-primary justify-center"
-              >
-                Sign In to Continue
-              </Link>
-              <Link
-                to="/signup"
-                state={{ from: { pathname: '/register', search: defaultTaskId ? `?task=${defaultTaskId}` : '' } }}
-                className="btn-outline justify-center"
-              >
-                Create Account
-              </Link>
-            </div>
-          </div>
-        </div>
-      </PageTransition>
-    );
-  }
 
   // Step 1 Submit -> Step 2
   const onStep1Submit = (data: Step1Data) => {
@@ -267,6 +244,12 @@ export default function RegistrationPage() {
   }, []);
 
   const handleFinalSubmit = async () => {
+    // Guards this function's own user.uid references for TypeScript's
+    // narrowing (the component-level "require auth" check now runs later,
+    // right before the JSX return — see the comment there for why) and
+    // defensively covers the unlikely case of the session ending between
+    // mount and this button click.
+    if (!user) return;
     setIsSubmitting(true);
     setPaymentError(null);
     let holdId: string | undefined;
@@ -359,6 +342,46 @@ export default function RegistrationPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Require auth to start. Deliberately placed AFTER every hook above (not
+  // as an early return higher up) — an early return before some of this
+  // component's hooks would make React call a different number of hooks
+  // depending on whether `user` is set, which throws "Rendered fewer hooks
+  // than expected" (React error #300) the moment `user` flips to null, e.g.
+  // right after signing out while this page is still mounted.
+  if (!user) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center bg-metal-50 px-4 py-20">
+          <div className="card p-8 max-w-md text-center">
+            <div className="w-14 h-14 rounded-2xl bg-navy-50 flex items-center justify-center mx-auto mb-4 text-navy-900">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+            <h2 className="text-title text-navy-900 mb-2">Authentication Required</h2>
+            <p className="text-sm text-metal-600 mb-6">
+              Please sign in or create an account to start your team registration for AAYODHYAM 2026.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/signin"
+                state={{ from: { pathname: '/register', search: defaultTaskId ? `?task=${defaultTaskId}` : '' } }}
+                className="btn-primary justify-center"
+              >
+                Sign In to Continue
+              </Link>
+              <Link
+                to="/signup"
+                state={{ from: { pathname: '/register', search: defaultTaskId ? `?task=${defaultTaskId}` : '' } }}
+                className="btn-outline justify-center"
+              >
+                Create Account
+              </Link>
+            </div>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   return (
     <PageTransition>

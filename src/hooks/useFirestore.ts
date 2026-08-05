@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   query,
   where,
@@ -207,17 +206,27 @@ export function useDeleteRegistration() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // Read first so we can decrement the matching public slot counter.
-      const snap = await getDoc(doc(db, 'registrations', id));
-      const taskId = snap.exists() ? (snap.data() as Registration).taskId : undefined;
+      const regRef = doc(db, 'registrations', id);
 
-      await deleteDoc(doc(db, 'registrations', id));
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(regRef);
+        if (!snap.exists()) return; // already gone — nothing to reconcile
 
-      if (taskId !== undefined) {
-        await updateDoc(doc(db, 'taskCounts', String(taskId)), { count: increment(-1) }).catch(() => {
-          // Counter doc may not exist in edge cases — safe to ignore.
-        });
-      }
+        const current = snap.data() as Registration;
+        tx.delete(regRef);
+
+        // Mirrors useUpdateRegistrationStatus's rule: a "rejected" registration
+        // already had its slot released back into the pool, so deleting it must
+        // NOT decrement count again — doing so double-frees the slot and can
+        // drive count negative (which is exactly what produced the "-2 / 8
+        // groups registered — 10 slots remaining" display bug).
+        if (current.paymentStatus !== 'rejected') {
+          const taskCountRef = doc(db, 'taskCounts', String(current.taskId));
+          const countSnap = await tx.get(taskCountRef);
+          const currentCount = countSnap.exists() ? (countSnap.data() as { count?: number }).count || 0 : 0;
+          tx.set(taskCountRef, { count: Math.max(0, currentCount - 1) }, { merge: true });
+        }
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['registrations'] });
