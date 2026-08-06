@@ -38,6 +38,10 @@ function getAuthHeader(): Record<string, string> {
 export interface RegistrationControl {
   opensAt: string; // ISO 8601, e.g. '2026-08-08T18:08:00+05:30'
   manuallyClosed: boolean;
+  // Force-open override — makes registration accessible immediately
+  // regardless of `opensAt`, without changing the scheduled date itself.
+  // manuallyClosed always wins if both are somehow true (safety default).
+  manuallyOpened: boolean;
 }
 
 // Default used only if the settings doc hasn't been created yet in
@@ -46,6 +50,7 @@ export interface RegistrationControl {
 const DEFAULT_REGISTRATION_CONTROL: RegistrationControl = {
   opensAt: '2026-08-08T18:08:00+05:30',
   manuallyClosed: false,
+  manuallyOpened: false,
 };
 
 // Public read — every visitor (signed in or not) needs this to know

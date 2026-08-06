@@ -362,10 +362,13 @@ export default function RegistrationPage() {
   // branch). `nowTick` re-runs this every second via the interval above,
   // so the moment the clock passes `opensAt`, `registrationClosed` flips
   // to false and the real form appears automatically — no refresh needed.
+  // Priority: manuallyClosed always wins (safety default) > manuallyOpened
+  // (force-open, skips the schedule entirely) > the scheduled opensAt clock.
   const opensAtDate = regControl ? new Date(regControl.opensAt) : null;
   const manuallyClosed = regControl?.manuallyClosed ?? false;
+  const manuallyOpened = regControl?.manuallyOpened ?? false;
   const isBeforeOpen = opensAtDate ? nowTick < opensAtDate.getTime() : true;
-  const registrationClosed = regControlLoading || manuallyClosed || isBeforeOpen;
+  const registrationClosed = regControlLoading || manuallyClosed || (!manuallyOpened && isBeforeOpen);
   const msUntilOpen = opensAtDate ? Math.max(0, opensAtDate.getTime() - nowTick) : 0;
   const countdown = {
     days: Math.floor(msUntilOpen / 86_400_000),

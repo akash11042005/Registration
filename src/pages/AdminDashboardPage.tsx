@@ -197,25 +197,38 @@ export default function AdminDashboardPage() {
 
   // Nuclear Reset — deletes every registration through the same
   // transaction-safe mutation the per-row trash icon uses (useDeleteRegistration),
-  // so each task's slot count is correctly decremented along the way. The old
-  // clearAllRegistrationsAndSubmissions() only cleared legacy browser
-  // localStorage and called a backend endpoint that no longer exists
-  // (api/admin/clear-all.ts was never migrated when registrations moved to
-  // Firestore) — it silently did nothing to the real data.
+  // so each task's slot count is correctly decremented along the way.
+  // Each deletion is wrapped in its own try/catch so one failure (a stale
+  // doc, a transient network blip, a Firestore transaction retry exhausted
+  // under contention) doesn't abort the whole loop and leave everything
+  // after it undeleted — the previous version stopped at the first error.
   const handleNuclearClear = async () => {
     setClearing(true);
+    const failures: string[] = [];
     try {
       for (const reg of registrations) {
-        if (reg.id) {
+        if (!reg.id) continue;
+        try {
           await deleteReg.mutateAsync(reg.id);
+        } catch (err) {
+          console.error(`Failed to delete registration ${reg.registrationId || reg.id}:`, err);
+          failures.push(reg.registrationId || reg.id);
         }
       }
       await refetchRegs();
       setShowClearModal(false);
-      alert('All registrations cleared successfully.');
+      if (failures.length === 0) {
+        alert('All registrations cleared successfully.');
+      } else {
+        alert(
+          `Cleared ${registrations.length - failures.length} of ${registrations.length} registrations.\n\n` +
+          `${failures.length} failed and are still in the table: ${failures.join(', ')}.\n\n` +
+          `Click "Clear All" again to retry just the remaining ones.`
+        );
+      }
     } catch (err) {
       console.error(err);
-      alert('Failed to clear all registrations — some may not have been deleted. Check the table and retry if needed.');
+      alert('Something went wrong while clearing registrations. Check the table and retry if needed.');
     } finally {
       setClearing(false);
     }
