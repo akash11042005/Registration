@@ -18,10 +18,11 @@ import {
   ShieldCheck,
   Sparkles,
   Clock,
+  Lock,
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTaskRegistrationCounts, useRegistrationByUid } from '@/hooks/useFirestore';
+import { useTaskRegistrationCounts, useRegistrationByUid, useRegistrationControl } from '@/hooks/useFirestore';
 import { payWithRazorpay } from '@/lib/razorpay';
 import { authFetch } from '@/lib/authFetch';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
@@ -70,6 +71,18 @@ export default function RegistrationPage() {
   const taskCounts = useTaskRegistrationCounts();
   const { data: existingRegistration, isLoading: checkingExistingRegistration } = useRegistrationByUid(user?.uid);
   const qc = useQueryClient();
+
+  // Registration open/close gate — see useRegistrationControl in
+  // useFirestore.ts. `regControlLoading` matters here: while this is still
+  // fetching, we do NOT want to briefly flash the real form before we know
+  // whether registration is actually open, so the gate below treats
+  // "still loading" the same as "not open yet."
+  const { data: regControl, isLoading: regControlLoading } = useRegistrationControl();
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Self-heal stale/abandoned slot holds on mount — mirrors the same call in
   // ProblemStatementsPage.tsx. Without this, a user who lands directly on
@@ -343,6 +356,79 @@ export default function RegistrationPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Derived registration-gate state (plain values, not hooks — safe to
+  // compute here since every hook above has already run regardless of
+  // branch). `nowTick` re-runs this every second via the interval above,
+  // so the moment the clock passes `opensAt`, `registrationClosed` flips
+  // to false and the real form appears automatically — no refresh needed.
+  const opensAtDate = regControl ? new Date(regControl.opensAt) : null;
+  const manuallyClosed = regControl?.manuallyClosed ?? false;
+  const isBeforeOpen = opensAtDate ? nowTick < opensAtDate.getTime() : true;
+  const registrationClosed = regControlLoading || manuallyClosed || isBeforeOpen;
+  const msUntilOpen = opensAtDate ? Math.max(0, opensAtDate.getTime() - nowTick) : 0;
+  const countdown = {
+    days: Math.floor(msUntilOpen / 86_400_000),
+    hours: Math.floor((msUntilOpen % 86_400_000) / 3_600_000),
+    mins: Math.floor((msUntilOpen % 3_600_000) / 60_000),
+    secs: Math.floor((msUntilOpen % 60_000) / 1_000),
+  };
+
+  // Gate 1: registration not open yet, or admin has manually closed it —
+  // shown to EVERYONE, signed in or not, before the auth-required check
+  // below, since a signed-out visitor following an early poster link should
+  // still see when registration opens rather than being asked to sign in
+  // first for something they can't do yet anyway.
+  if (registrationClosed) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center bg-metal-50 px-4 py-20">
+          <div className="card p-8 max-w-md text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gold-50 flex items-center justify-center mx-auto mb-4 text-gold-600">
+              <Lock className="w-7 h-7" />
+            </div>
+            {regControlLoading ? (
+              <p className="text-sm text-metal-500">Loading…</p>
+            ) : manuallyClosed ? (
+              <>
+                <h2 className="text-title text-navy-900 mb-2">Registration Is Currently Closed</h2>
+                <p className="text-sm text-metal-600 mb-6">
+                  Team registration for AAYODHYAM 2026 is temporarily closed. Please check back shortly, or watch our announcements for updates.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-title text-navy-900 mb-2">Registration Opens Soon</h2>
+                <p className="text-sm text-metal-600 mb-5">
+                  Team registration for AAYODHYAM 2026 opens on{' '}
+                  <span className="font-semibold text-navy-900">
+                    {opensAtDate?.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
+                  </span>
+                  . This page unlocks automatically the moment it opens — no need to refresh.
+                </p>
+                <div className="grid grid-cols-4 gap-2 mb-6">
+                  {[
+                    { label: 'Days', value: countdown.days },
+                    { label: 'Hours', value: countdown.hours },
+                    { label: 'Mins', value: countdown.mins },
+                    { label: 'Secs', value: countdown.secs },
+                  ].map((u) => (
+                    <div key={u.label} className="bg-navy-50 rounded-xl py-3">
+                      <p className="text-xl font-black text-navy-900 font-mono">{String(u.value).padStart(2, '0')}</p>
+                      <p className="text-[10px] font-bold text-metal-500 uppercase tracking-wider">{u.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            <Link to="/problem-statements" className="btn-outline justify-center">
+              Browse Problem Statements
+            </Link>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   // Require auth to start. Deliberately placed AFTER every hook above (not
   // as an early return higher up) — an early return before some of this

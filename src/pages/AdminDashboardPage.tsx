@@ -23,6 +23,8 @@ import {
   ChevronDown,
   FileText,
   FileType,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
@@ -39,6 +41,8 @@ import {
   useResolvePaymentIssue,
   useTaskCountsDetailed,
   useFailedPaymentAttempts,
+  useRegistrationControl,
+  useUpdateRegistrationControl,
   clearAllRegistrationsAndSubmissions,
 } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
@@ -56,6 +60,8 @@ export default function AdminDashboardPage() {
   const { data: paymentIssues = [] } = usePaymentIssues();
   const { data: taskCountsDetailed = {} } = useTaskCountsDetailed();
   const { data: failedAttempts = [] } = useFailedPaymentAttempts();
+  const { data: regControl } = useRegistrationControl();
+  const updateRegControl = useUpdateRegistrationControl();
 
   const updateStatus = useUpdateRegistrationStatus();
   const deleteReg = useDeleteRegistration();
@@ -206,6 +212,13 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Registration open/close control — flips the same `manuallyClosed` flag
+  // that RegistrationPage.tsx's gate reads. Independent of the scheduled
+  // `opensAt` time; this always wins regardless of the clock.
+  const handleToggleRegistration = () => {
+    updateRegControl.mutate({ manuallyClosed: !(regControl?.manuallyClosed ?? false) });
+  };
+
   return (
     <PageTransition>
       {/* Header */}
@@ -277,6 +290,55 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Registration Open/Close Control — gates src/pages/RegistrationPage.tsx.
+            manuallyClosed is a standing override independent of the scheduled
+            opensAt time: flipping it here always wins, whether that means
+            closing early or forcing it open before the scheduled time. */}
+        <div className={cn(
+          'p-4 rounded-2xl border mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4',
+          regControl?.manuallyClosed
+            ? 'bg-red-50 border-red-200'
+            : 'bg-emerald-50 border-emerald-200'
+        )}>
+          <div className="flex items-center gap-3">
+            {regControl?.manuallyClosed ? (
+              <Lock className="w-5 h-5 text-red-600 shrink-0" />
+            ) : (
+              <Unlock className="w-5 h-5 text-emerald-600 shrink-0" />
+            )}
+            <div>
+              <p className="font-bold text-sm text-navy-900">
+                Registration is currently {regControl?.manuallyClosed ? 'CLOSED (manual override)' : 'OPEN'}
+              </p>
+              <p className="text-xs text-metal-600 mt-0.5">
+                Scheduled to auto-open{' '}
+                {regControl?.opensAt
+                  ? new Date(regControl.opensAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                  : '—'}
+                {regControl?.manuallyClosed
+                  ? ' — currently overridden closed regardless of that time.'
+                  : '.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleRegistration}
+            disabled={updateRegControl.isPending}
+            className={cn(
+              'text-xs px-4 py-2 font-bold rounded-xl shrink-0 disabled:opacity-60',
+              regControl?.manuallyClosed
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'bg-red-600 text-white hover:bg-red-700'
+            )}
+          >
+            {updateRegControl.isPending
+              ? 'Updating…'
+              : regControl?.manuallyClosed
+                ? 'Reopen Registration'
+                : 'Close Registration Now'}
+          </button>
+        </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -9,6 +10,7 @@ import {
   limit,
   updateDoc,
   deleteDoc,
+  setDoc,
   increment,
   runTransaction,
 } from 'firebase/firestore';
@@ -21,6 +23,61 @@ import { DEFAULT_ANNOUNCEMENTS } from '@/lib/constants';
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem('aay_auth_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// ─────────────────────────────────────────────────
+// Registration open/close control — a single Firestore doc
+// (settings/registrationControl) gates the /register page for
+// everyone. `opensAt` is the scheduled auto-open time; the page
+// flips open the instant a live clock passes it, no redeploy or
+// manual action needed. `manuallyClosed` is the admin's own kill
+// switch, independent of the schedule — e.g. to pause registration
+// early if every task fills up, or to delay opening past the
+// scheduled time without touching the date itself.
+// ─────────────────────────────────────────────────
+export interface RegistrationControl {
+  opensAt: string; // ISO 8601, e.g. '2026-08-08T18:08:00+05:30'
+  manuallyClosed: boolean;
+}
+
+// Default used only if the settings doc hasn't been created yet in
+// Firestore — 6:08 PM IST, August 8, 2026 (chosen to give enough buffer
+// after domain/DNS setup, with the 8/8 date reflected in the time too).
+const DEFAULT_REGISTRATION_CONTROL: RegistrationControl = {
+  opensAt: '2026-08-08T18:08:00+05:30',
+  manuallyClosed: false,
+};
+
+// Public read — every visitor (signed in or not) needs this to know
+// whether to show the registration form or the "opens soon" screen.
+export function useRegistrationControl() {
+  return useQuery({
+    queryKey: ['registrationControl'],
+    queryFn: async () => {
+      const snap = await getDoc(doc(db, 'settings', 'registrationControl'));
+      if (!snap.exists()) return DEFAULT_REGISTRATION_CONTROL;
+      return { ...DEFAULT_REGISTRATION_CONTROL, ...(snap.data() as Partial<RegistrationControl>) };
+    },
+    staleTime: 10_000,
+    // Poll fairly often (not just on-mount) so a tab that's been open since
+    // before the admin flips `manuallyClosed` — or since before `opensAt`
+    // passes — picks up the change without the user needing to refresh.
+    refetchInterval: 15_000,
+  });
+}
+
+// Admin-only mutation (enforced by firestore.rules: settings/{id} write
+// requires isAdmin()) — used by the toggle in AdminDashboardPage.tsx.
+export function useUpdateRegistrationControl() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (fields: Partial<RegistrationControl>) => {
+      await setDoc(doc(db, 'settings', 'registrationControl'), fields, { merge: true });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrationControl'] });
+    },
+  });
 }
 
 // ─────────────────────────────────────────────────

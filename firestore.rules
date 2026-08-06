@@ -111,6 +111,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Site-wide settings — currently just the registration open/close
+    // control (see src/hooks/useFirestore.ts: useRegistrationControl).
+    // Public read so every visitor (signed in or not) can tell whether
+    // registration is open yet; only an admin can flip it.
+    match /settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Announcements: public read, admin write (still served via the local
     // Express/localStorage fallback as of Phase 4 — included here for when
     // that gets migrated to Firestore too).
