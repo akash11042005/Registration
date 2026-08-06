@@ -271,10 +271,20 @@ export function useDeleteRegistration() {
       const regRef = doc(db, 'registrations', id);
 
       await runTransaction(db, async (tx) => {
+        // Firestore transactions require ALL reads to happen before ANY
+        // writes — reading taskCountRef after tx.delete(regRef) (as this
+        // used to do) throws every time, which is exactly why every single
+        // delete was failing (bulk clear and the per-row trash icon alike),
+        // not just occasionally. Both tx.get() calls now happen first.
         const snap = await tx.get(regRef);
         if (!snap.exists()) return; // already gone — nothing to reconcile
 
         const current = snap.data() as Registration;
+        const needsCountDecrement = current.paymentStatus !== 'rejected';
+        const taskCountRef = doc(db, 'taskCounts', String(current.taskId));
+        const countSnap = needsCountDecrement ? await tx.get(taskCountRef) : null;
+
+        // Writes only after every read above has completed.
         tx.delete(regRef);
 
         // Mirrors useUpdateRegistrationStatus's rule: a "rejected" registration
@@ -282,9 +292,7 @@ export function useDeleteRegistration() {
         // NOT decrement count again — doing so double-frees the slot and can
         // drive count negative (which is exactly what produced the "-2 / 8
         // groups registered — 10 slots remaining" display bug).
-        if (current.paymentStatus !== 'rejected') {
-          const taskCountRef = doc(db, 'taskCounts', String(current.taskId));
-          const countSnap = await tx.get(taskCountRef);
+        if (needsCountDecrement && countSnap) {
           const currentCount = countSnap.exists() ? (countSnap.data() as { count?: number }).count || 0 : 0;
           tx.set(taskCountRef, { count: Math.max(0, currentCount - 1) }, { merge: true });
         }

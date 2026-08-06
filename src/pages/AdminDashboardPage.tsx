@@ -62,6 +62,16 @@ export default function AdminDashboardPage() {
   const { data: regControl } = useRegistrationControl();
   const updateRegControl = useUpdateRegistrationControl();
 
+  // Live clock so the admin banner reflects what a real visitor would
+  // actually see right now (not just the raw manuallyClosed flag) — e.g.
+  // "OPEN" here previously stayed true even while the scheduled opensAt
+  // time hadn't arrived yet, which didn't match what /register showed.
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const updateStatus = useUpdateRegistrationStatus();
   const deleteReg = useDeleteRegistration();
   const createAnn = useCreateAnnouncement();
@@ -234,11 +244,24 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Registration open/close control — flips the same `manuallyClosed` flag
-  // that RegistrationPage.tsx's gate reads. Independent of the scheduled
-  // `opensAt` time; this always wins regardless of the clock.
-  const handleToggleRegistration = () => {
-    updateRegControl.mutate({ manuallyClosed: !(regControl?.manuallyClosed ?? false) });
+  // Registration open/close control — same three-state model as
+  // RegistrationPage.tsx's gate: manuallyClosed always wins > manuallyOpened
+  // (force-open, skips the schedule) > the scheduled opensAt clock.
+  const opensAtDate = regControl ? new Date(regControl.opensAt) : null;
+  const manuallyClosed = regControl?.manuallyClosed ?? false;
+  const manuallyOpened = regControl?.manuallyOpened ?? false;
+  const isBeforeOpen = opensAtDate ? nowTick < opensAtDate.getTime() : true;
+  // What a real visitor on /register sees right now, given the same logic.
+  const isEffectivelyOpen = !manuallyClosed && (manuallyOpened || !isBeforeOpen);
+
+  const handleCloseNow = () => {
+    updateRegControl.mutate({ manuallyClosed: true, manuallyOpened: false });
+  };
+  const handleOpenNow = () => {
+    updateRegControl.mutate({ manuallyClosed: false, manuallyOpened: true });
+  };
+  const handleResetToSchedule = () => {
+    updateRegControl.mutate({ manuallyClosed: false, manuallyOpened: false });
   };
 
   return (
@@ -314,52 +337,72 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Registration Open/Close Control — gates src/pages/RegistrationPage.tsx.
-            manuallyClosed is a standing override independent of the scheduled
-            opensAt time: flipping it here always wins, whether that means
-            closing early or forcing it open before the scheduled time. */}
+            Three real states, matching the gate's own priority order:
+            manuallyClosed (always wins) > manuallyOpened (force-open, skips
+            the schedule) > following the opensAt clock. The banner's OPEN/
+            CLOSED status reflects `isEffectivelyOpen`, computed the same way
+            the gate computes it — not just the raw manuallyClosed flag —
+            so it never disagrees with what a real visitor sees. */}
         <div className={cn(
           'p-4 rounded-2xl border mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4',
-          regControl?.manuallyClosed
-            ? 'bg-red-50 border-red-200'
-            : 'bg-emerald-50 border-emerald-200'
+          isEffectivelyOpen
+            ? 'bg-emerald-50 border-emerald-200'
+            : 'bg-red-50 border-red-200'
         )}>
           <div className="flex items-center gap-3">
-            {regControl?.manuallyClosed ? (
-              <Lock className="w-5 h-5 text-red-600 shrink-0" />
-            ) : (
+            {isEffectivelyOpen ? (
               <Unlock className="w-5 h-5 text-emerald-600 shrink-0" />
+            ) : (
+              <Lock className="w-5 h-5 text-red-600 shrink-0" />
             )}
             <div>
               <p className="font-bold text-sm text-navy-900">
-                Registration is currently {regControl?.manuallyClosed ? 'CLOSED (manual override)' : 'OPEN'}
+                Registration is currently {isEffectivelyOpen ? 'OPEN' : 'CLOSED'}
+                {manuallyClosed && ' (manually closed)'}
+                {manuallyOpened && ' (manually forced open)'}
               </p>
               <p className="text-xs text-metal-600 mt-0.5">
                 Scheduled to auto-open{' '}
-                {regControl?.opensAt
-                  ? new Date(regControl.opensAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+                {opensAtDate
+                  ? opensAtDate.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
                   : '—'}
-                {regControl?.manuallyClosed
+                {manuallyClosed
                   ? ' — currently overridden closed regardless of that time.'
-                  : '.'}
+                  : manuallyOpened
+                    ? ' — currently forced open ahead of that time.'
+                    : '.'}
               </p>
             </div>
           </div>
-          <button
-            onClick={handleToggleRegistration}
-            disabled={updateRegControl.isPending}
-            className={cn(
-              'text-xs px-4 py-2 font-bold rounded-xl shrink-0 disabled:opacity-60',
-              regControl?.manuallyClosed
-                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-red-600 text-white hover:bg-red-700'
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {(manuallyClosed || manuallyOpened) && (
+              <button
+                onClick={handleResetToSchedule}
+                disabled={updateRegControl.isPending}
+                className="text-xs px-3 py-2 font-semibold rounded-xl text-metal-600 hover:bg-metal-100 disabled:opacity-60"
+              >
+                Reset to Scheduled Time
+              </button>
             )}
-          >
-            {updateRegControl.isPending
-              ? 'Updating…'
-              : regControl?.manuallyClosed
-                ? 'Reopen Registration'
-                : 'Close Registration Now'}
-          </button>
+            {!isEffectivelyOpen && (
+              <button
+                onClick={handleOpenNow}
+                disabled={updateRegControl.isPending}
+                className="text-xs px-4 py-2 font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {updateRegControl.isPending ? 'Updating…' : 'Open Registration Now'}
+              </button>
+            )}
+            {isEffectivelyOpen && (
+              <button
+                onClick={handleCloseNow}
+                disabled={updateRegControl.isPending}
+                className="text-xs px-4 py-2 font-bold rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {updateRegControl.isPending ? 'Updating…' : 'Close Registration Now'}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Stats Grid */}
