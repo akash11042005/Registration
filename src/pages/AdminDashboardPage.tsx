@@ -43,7 +43,6 @@ import {
   useFailedPaymentAttempts,
   useRegistrationControl,
   useUpdateRegistrationControl,
-  clearAllRegistrationsAndSubmissions,
 } from '@/hooks/useFirestore';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
@@ -196,17 +195,27 @@ export default function AdminDashboardPage() {
     setNewAnnImportant(false);
   };
 
-  // Nuclear Reset
+  // Nuclear Reset — deletes every registration through the same
+  // transaction-safe mutation the per-row trash icon uses (useDeleteRegistration),
+  // so each task's slot count is correctly decremented along the way. The old
+  // clearAllRegistrationsAndSubmissions() only cleared legacy browser
+  // localStorage and called a backend endpoint that no longer exists
+  // (api/admin/clear-all.ts was never migrated when registrations moved to
+  // Firestore) — it silently did nothing to the real data.
   const handleNuclearClear = async () => {
     setClearing(true);
     try {
-      await clearAllRegistrationsAndSubmissions();
+      for (const reg of registrations) {
+        if (reg.id) {
+          await deleteReg.mutateAsync(reg.id);
+        }
+      }
       await refetchRegs();
       setShowClearModal(false);
-      alert('All registrations and submissions cleared successfully.');
+      alert('All registrations cleared successfully.');
     } catch (err) {
       console.error(err);
-      alert('Failed to clear database records.');
+      alert('Failed to clear all registrations — some may not have been deleted. Check the table and retry if needed.');
     } finally {
       setClearing(false);
     }
