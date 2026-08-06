@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AnimatePresence } from 'framer-motion';
+import logoImg from '@/assets/logo.png';
 
 import { AuthProvider } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
@@ -39,8 +40,8 @@ function LoadingFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-navy-900 flex items-center justify-center animate-bounce">
-          <span className="text-gold-400 font-display font-black text-sm">Aa</span>
+        <div className="w-10 h-10 rounded-xl bg-navy-900 flex items-center justify-center animate-bounce overflow-hidden">
+          <img src={logoImg} alt="AAYODHYAM logo" className="w-full h-full object-cover" />
         </div>
         <p className="text-xs font-semibold text-metal-500 uppercase tracking-widest">Loading AAYODHYAM 2026…</p>
       </div>
