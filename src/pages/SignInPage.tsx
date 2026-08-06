@@ -9,6 +9,7 @@ import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
 import { ADMIN_LOGIN_USERNAME, ADMIN_LOGIN_EMAIL, ADMIN_EMAILS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import logoImg from '@/assets/logo.png';
 
 const schema = z.object({
   email: z.string().min(1, 'Enter your email or username').refine(
@@ -69,8 +70,8 @@ export default function SignInPage() {
         <div className="w-full max-w-sm">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-navy-900 flex items-center justify-center mx-auto mb-3">
-              <span className="text-gold-400 font-display font-black">Aa</span>
+            <div className="w-12 h-12 rounded-xl bg-navy-900 flex items-center justify-center mx-auto mb-3 overflow-hidden">
+              <img src={logoImg} alt="AAYODHYAM logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl font-bold text-navy-900">Sign in to AAYODHYAM</h1>
             <p className="text-sm text-metal-500 mt-1">Access your team dashboard and registration</p>

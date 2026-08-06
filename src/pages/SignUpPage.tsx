@@ -8,6 +8,7 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle, UserPlus, Globe } from 'lucide-re
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import logoImg from '@/assets/logo.png';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -65,8 +66,8 @@ export default function SignUpPage() {
       <div className="min-h-screen flex items-center justify-center bg-metal-50 py-16 px-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 rounded-xl bg-navy-900 flex items-center justify-center mx-auto mb-3">
-              <span className="text-gold-400 font-display font-black">Aa</span>
+            <div className="w-12 h-12 rounded-xl bg-navy-900 flex items-center justify-center mx-auto mb-3 overflow-hidden">
+              <img src={logoImg} alt="AAYODHYAM logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl font-bold text-navy-900">Create Your Account</h1>
             <p className="text-sm text-metal-500 mt-1">Register for AAYODHYAM 2026</p>

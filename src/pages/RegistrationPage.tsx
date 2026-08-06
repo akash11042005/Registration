@@ -25,6 +25,7 @@ import { useTaskRegistrationCounts, useRegistrationByUid } from '@/hooks/useFire
 import { payWithRazorpay } from '@/lib/razorpay';
 import { authFetch } from '@/lib/authFetch';
 import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
+import logoImg from '@/assets/logo.png';
 import {
   BASE_REGISTRATION_FEE,
   HOME_DELIVERY_ADDON_FEE,
@@ -899,8 +900,8 @@ export default function RegistrationPage() {
 
                 <div className="flex items-center justify-between border-b border-navy-900/10 pb-4 mb-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-navy-900 flex items-center justify-center">
-                      <span className="text-gold-400 font-display font-black text-xs">Aa</span>
+                    <div className="w-8 h-8 rounded-lg bg-navy-900 flex items-center justify-center overflow-hidden">
+                      <img src={logoImg} alt="AAYODHYAM logo" className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <h3 className="font-bold text-navy-900 text-sm leading-none">AAYODHYAM 2026</h3>

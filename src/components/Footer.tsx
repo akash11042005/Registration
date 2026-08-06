@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Globe, MapPin, Phone, ExternalLink, ArrowUpRight } from 'lucide-react';
 import { ORG } from '@/lib/constants';
+import logoImg from '@/assets/logo.png';
 
 const footerLinks = {
   'Quick Links': [
@@ -33,8 +34,8 @@ export default function Footer() {
           {/* Brand column */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-lg bg-gold-500 flex items-center justify-center">
-                <span className="text-navy-950 font-display font-black text-sm tracking-tight">Aa</span>
+              <div className="w-9 h-9 rounded-lg bg-gold-500 flex items-center justify-center overflow-hidden">
+                <img src={logoImg} alt="AAYODHYAM logo" className="w-full h-full object-cover" />
               </div>
               <div>
                 <span className="font-display font-bold text-white text-lg leading-none block">AAYODHYAM</span>
