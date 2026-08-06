@@ -392,18 +392,16 @@ export default function RegistrationPage() {
             </div>
             {regControlLoading ? (
               <p className="text-sm text-metal-500">Loading…</p>
-            ) : manuallyClosed ? (
-              <>
-                <h2 className="text-title text-navy-900 mb-2">Registration Is Currently Closed</h2>
-                <p className="text-sm text-metal-600 mb-6">
-                  Team registration for AAYODHYAM 2026 is temporarily closed. Please check back shortly, or watch our announcements for updates.
-                </p>
-              </>
             ) : (
               <>
-                <h2 className="text-title text-navy-900 mb-2">Registration Opens Soon</h2>
+                <h2 className="text-title text-navy-900 mb-2">
+                  {manuallyClosed ? 'Registration Is Currently Closed' : 'Registration Opens Soon'}
+                </h2>
                 <p className="text-sm text-metal-600 mb-5">
-                  Team registration for AAYODHYAM 2026 opens on{' '}
+                  {manuallyClosed && (
+                    <>Team registration for AAYODHYAM 2026 is temporarily closed. </>
+                  )}
+                  It's scheduled to {manuallyClosed ? 're' : ''}open on{' '}
                   <span className="font-semibold text-navy-900">
                     {opensAtDate?.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })}
                   </span>
@@ -422,6 +420,11 @@ export default function RegistrationPage() {
                     </div>
                   ))}
                 </div>
+                {manuallyClosed && msUntilOpen === 0 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-4">
+                    The scheduled time has already passed — registration is only staying closed because of the organizers' manual override, and will open as soon as they lift it.
+                  </p>
+                )}
               </>
             )}
             <Link to="/problem-statements" className="btn-outline justify-center">
