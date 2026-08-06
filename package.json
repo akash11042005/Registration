@@ -40,6 +40,7 @@
     "framer-motion": "^12.42.2",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.26.0",
+    "pdfkit": "^0.19.1",
     "postprocessing": "^6.39.4",
     "razorpay": "^2.9.8",
     "react": "^19.2.7",
@@ -49,11 +50,13 @@
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0",
     "three": "^0.185.1",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^24.13.3",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.1",

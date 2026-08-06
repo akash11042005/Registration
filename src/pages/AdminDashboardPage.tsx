@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -20,9 +20,13 @@ import {
   RefreshCw,
   Eye,
   Check,
+  ChevronDown,
+  FileText,
+  FileType,
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
+import { authFetch } from '@/lib/authFetch';
 import {
   useRegistrations,
   useAllSubmissions,
@@ -41,6 +45,8 @@ import { PROBLEM_STATEMENTS } from '@/lib/problemStatements';
 import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
 import { Registration, Announcement, Submission, PaymentIssue } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+type ExportFormat = 'csv' | 'xlsx' | 'pdf';
 
 export default function AdminDashboardPage() {
   const { user, isAdmin } = useAuth();
@@ -67,6 +73,21 @@ export default function AdminDashboardPage() {
   const [newAnnImportant, setNewAnnImportant] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [clearing, setClearing] = useState(false);
+
+  // Export menu state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<ExportFormat | null>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
 
   if (!user || !isAdmin) {
     return (
@@ -121,30 +142,36 @@ export default function AdminDashboardPage() {
     return { ...ps, confirmed, held, occupied, remaining: Math.max(0, MAX_TEAMS_PER_TASK - occupied) };
   }).sort((a, b) => a.remaining - b.remaining);
 
-  // Export CSV
-  const handleExportCSV = () => {
-    const headers = ['Registration ID', 'Team Name', 'Leader Name', 'Leader Email', 'Phone', 'Task ID', 'Task Title', 'UTR/Transaction ID', 'Payment Status', 'Created At'];
-    const rows = filteredRegs.map(r => [
-      r.registrationId,
-      `"${r.teamName}"`,
-      `"${r.leaderName}"`,
-      r.leaderEmail,
-      r.leaderPhone,
-      r.taskId,
-      `"${r.taskTitle}"`,
-      r.transactionId,
-      r.paymentStatus,
-      r.createdAt,
-    ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `AAYODHYAM_Registrations_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Export — CSV, Excel, and PDF are all generated server-side by the same
+  // endpoint (api/admin/export-registrations.ts), selected via ?format=.
+  // This covers the full registrations list from Firestore (not just
+  // `filteredRegs`), since generation happens on the backend independent
+  // of whatever search/filter is currently applied on screen.
+  const handleExport = async (format: ExportFormat) => {
+    setShowExportMenu(false);
+    setExportingFormat(format);
+    try {
+      const res = await authFetch(`/api/admin/export-registrations?format=${format}`, { method: 'GET' });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Failed to generate the ${format.toUpperCase()} export.`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `AAYODHYAM_Registrations_${dateStamp}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(`${format} export failed:`, err);
+      alert(err instanceof Error ? err.message : `Failed to generate the ${format.toUpperCase()} export. Please try again.`);
+    } finally {
+      setExportingFormat(null);
+    }
   };
 
   // Add Announcement
@@ -195,9 +222,41 @@ export default function AdminDashboardPage() {
               <button onClick={() => refetchRegs()} className="btn-outline border-white/20 text-white hover:bg-white/10 text-xs px-3 py-2">
                 <RefreshCw className="w-3.5 h-3.5" /> Refresh Data
               </button>
-              <button onClick={handleExportCSV} className="btn-gold text-xs px-3.5 py-2 font-bold">
-                <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
-              </button>
+
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  onClick={() => setShowExportMenu((v) => !v)}
+                  disabled={exportingFormat !== null}
+                  className="btn-gold text-xs px-3.5 py-2 font-bold disabled:opacity-60"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  {exportingFormat ? `Generating ${exportingFormat.toUpperCase()}…` : 'Export'}
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl border border-metal-200 shadow-elevated overflow-hidden z-20">
+                    <button
+                      onClick={() => handleExport('csv')}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-metal-700 hover:bg-metal-50 transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-metal-500" /> Export as CSV
+                    </button>
+                    <button
+                      onClick={() => handleExport('xlsx')}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-metal-700 hover:bg-metal-50 transition-colors border-t border-metal-100"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" /> Export as Excel
+                    </button>
+                    <button
+                      onClick={() => handleExport('pdf')}
+                      className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-metal-700 hover:bg-metal-50 transition-colors border-t border-metal-100"
+                    >
+                      <FileType className="w-3.5 h-3.5 text-red-600" /> Export as PDF
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
