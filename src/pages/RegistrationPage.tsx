@@ -77,7 +77,7 @@ export default function RegistrationPage() {
   // fetching, we do NOT want to briefly flash the real form before we know
   // whether registration is actually open, so the gate below treats
   // "still loading" the same as "not open yet."
-  const { data: regControl, isLoading: regControlLoading } = useRegistrationControl();
+  const { data: regControl, isLoading: regControlLoading, isError: regControlError, refetch: refetchRegControl } = useRegistrationControl();
   const [nowTick, setNowTick] = useState(Date.now());
   useEffect(() => {
     const interval = setInterval(() => setNowTick(Date.now()), 1000);
@@ -376,6 +376,33 @@ export default function RegistrationPage() {
     mins: Math.floor((msUntilOpen % 3_600_000) / 60_000),
     secs: Math.floor((msUntilOpen % 60_000) / 1_000),
   };
+
+  // Gate 0: the registration-control read itself failed (e.g. Firestore
+  // rules for the `settings` collection aren't published yet, or a network
+  // blip) — checked first and separately from Gate 1 below. Previously this
+  // case fell through silently: regControl stayed undefined, opensAtDate
+  // became null, and the page rendered a broken "opens on ." with an
+  // all-zero countdown instead of telling anyone what actually went wrong.
+  if (regControlError) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center bg-metal-50 px-4 py-20">
+          <div className="card p-8 max-w-md text-center">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4 text-red-600">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <h2 className="text-title text-navy-900 mb-2">Couldn't Check Registration Status</h2>
+            <p className="text-sm text-metal-600 mb-6">
+              Something went wrong loading the registration schedule. This is usually temporary — try again in a moment.
+            </p>
+            <button onClick={() => refetchRegControl()} className="btn-primary justify-center mx-auto">
+              Retry
+            </button>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   // Gate 1: registration not open yet, or admin has manually closed it —
   // shown to EVERYONE, signed in or not, before the auth-required check
@@ -1037,7 +1064,7 @@ export default function RegistrationPage() {
                 </div>
 
                 <div className="pt-3 border-t border-navy-900/10 flex items-center justify-between text-[11px] text-metal-500">
-                  <span>Department of Mechanical Engineering, WCE Sangli</span>
+                  <span>Department of Metallurgy &amp; Materials Engg, WCE Sangli</span>
                   <span>{new Date().toLocaleDateString()}</span>
                 </div>
               </div>
