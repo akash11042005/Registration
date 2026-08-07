@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { useAuth } from '@/contexts/AuthContext';
+import rulebookPdf from '@/assets/Aayodhyam_2026_rulebook.pdf';
 import {
   useRegistrationByUid,
   useSubmissionsByUid,
@@ -59,7 +60,7 @@ const editDetailsSchema = z.object({
 type EditDetailsFormData = z.infer<typeof editDetailsSchema>;
 
 export default function TeamDashboardPage() {
-  const { user } = useAuth();
+  const { user, resendVerificationEmail } = useAuth();
   const { data: registration, isLoading: regLoading, isError: regError, error: regErrorObj } = useRegistrationByUid(user?.uid);
   const { data: submissions = [], isLoading: subLoading } = useSubmissionsByUid(user?.uid);
   const { data: announcements = [] } = useAnnouncements();
@@ -70,6 +71,17 @@ export default function TeamDashboardPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'submissions' | 'resources'>('overview');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [verifyEmailStatus, setVerifyEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  const handleResendVerification = async () => {
+    setVerifyEmailStatus('sending');
+    try {
+      await resendVerificationEmail();
+      setVerifyEmailStatus('sent');
+    } catch {
+      setVerifyEmailStatus('error');
+    }
+  };
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editSaved, setEditSaved] = useState(false);
@@ -173,6 +185,26 @@ export default function TeamDashboardPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {user.emailVerified === false && (
+          <div className="card p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border border-gold-500/30 bg-gold-500/5">
+            <p className="text-xs text-metal-200">
+              Your email address isn't verified yet. Verify it so you don't miss important updates about your registration.
+            </p>
+            <button
+              onClick={handleResendVerification}
+              disabled={verifyEmailStatus === 'sending' || verifyEmailStatus === 'sent'}
+              className="btn-outline text-[11px] px-3 py-1.5 whitespace-nowrap disabled:opacity-60"
+            >
+              {verifyEmailStatus === 'sent'
+                ? 'Verification email sent ✓'
+                : verifyEmailStatus === 'sending'
+                  ? 'Sending…'
+                  : verifyEmailStatus === 'error'
+                    ? 'Failed — try again'
+                    : 'Resend verification email'}
+            </button>
+          </div>
+        )}
         {regError && (
           <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800 mb-6 flex items-start gap-3">
             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -568,9 +600,6 @@ export default function TeamDashboardPage() {
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
               { title: 'Official AAYODHYAM Rulebook PDF', size: '1.2 MB', desc: 'Full event guidelines, safety rules, and WCE lab access schedule.' },
-              { title: 'Technical Report Template (.docx)', size: '450 KB', desc: 'Standardized format for Friday final report submission.' },
-              { title: 'ASTM E112 Micrograph Dataset', size: '15.4 MB', desc: 'Sample images for Computational Task #3 algorithm benchmarking.' },
-              { title: 'Presentation Deck Template (.pptx)', size: '2.1 MB', desc: 'WCE-branded template for jury viva presentation.' },
             ].map((res) => (
               <div key={res.title} className="card p-5 space-y-3 flex flex-col justify-between">
                 <div>
@@ -580,9 +609,13 @@ export default function TeamDashboardPage() {
                 </div>
                 <div className="flex items-center justify-between border-t border-metal-100 pt-3">
                   <span className="text-[11px] text-metal-400">{res.size}</span>
-                  <button onClick={() => alert('Downloading official resource file...')} className="btn-ghost text-xs py-1 px-2 text-navy-700">
+                  <a
+                    href={rulebookPdf}
+                    download="AAYODHYAM_2026_Rulebook.pdf"
+                    className="btn-ghost text-xs py-1 px-2 text-navy-700"
+                  >
                     <Download className="w-3.5 h-3.5" /> Download
-                  </button>
+                  </a>
                 </div>
               </div>
             ))}
