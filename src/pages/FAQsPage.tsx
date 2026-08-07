@@ -39,7 +39,7 @@ const FAQS = [
       },
       {
         q: 'Is there a minimum number of members required?',
-        a: 'No. Solo participation (1-member team) is allowed, though teams of 2–3 are recommended given the workload.',
+        a: 'Teams of 3 members are recommended given the workload.',
       },
     ],
   },
@@ -90,7 +90,7 @@ const FAQS = [
       },
       {
         q: 'What if I face a technical issue with the portal?',
-        a: 'Email metallurgy@walchandsangli.ac.in with a description of the issue and screenshots if possible. We\'ll respond within 24 hours.',
+        a: 'Email aayodhyam@walchandsangli.ac.in with a description of the issue and screenshots if possible. We\'ll respond within 24 hours.',
       },
     ],
   },
