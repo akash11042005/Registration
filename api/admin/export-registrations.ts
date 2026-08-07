@@ -17,7 +17,7 @@ import { getAdminDb } from '../_lib/firebaseadmin.js';
 import { getVerifiedCaller } from '../_lib/verifyAuth.js';
 
 const ADMIN_EMAILS = [
-    'metallurgy@walchandsangli.ac.in',
+    'aayodhyam@walchandsangli.ac.in',
     'admin@aayodhyam2026.in',
     // Keep in sync with src/lib/constants.ts ADMIN_EMAILS
 ];

@@ -24,7 +24,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() &&
         request.auth.token.email in [
-          'metallurgy@walchandsangli.ac.in',
+          'aayodhyam@walchandsangli.ac.in',
           'admin@aayodhyam2026.in'
         ];
     }

@@ -73,7 +73,7 @@ app.post('/api/auth/signup', async (req, res) => {
       displayName,
       email: email.toLowerCase(),
       passwordHash,
-      role: email.toLowerCase() === 'metallurgy@walchandsangli.ac.in' ? 'admin' : 'participant',
+      role: email.toLowerCase() === 'aayodhyam@walchandsangli.ac.in' ? 'admin' : 'participant',
       createdAt: new Date().toISOString(),
     };
 

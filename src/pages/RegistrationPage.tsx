@@ -1037,7 +1037,7 @@ export default function RegistrationPage() {
                 </div>
 
                 <div className="pt-3 border-t border-navy-900/10 flex items-center justify-between text-[11px] text-metal-500">
-                  <span>Department of Metallurgy &amp; Materials Engg, WCE Sangli</span>
+                  <span>Department of Mechanical Engineering, WCE Sangli</span>
                   <span>{new Date().toLocaleDateString()}</span>
                 </div>
               </div>

@@ -9,7 +9,7 @@ const INITIAL_DATA = {
     {
       id: 'usr_admin_1',
       displayName: 'AAYODHYAM Admin',
-      email: 'metallurgy@walchandsangli.ac.in',
+      email: 'aayodhyam@walchandsangli.ac.in',
       // password: "adminpassword"
       passwordHash: '$2a$10$wOa12HjS.T06VlGk3P8L3.aV1sL/LqE3mQ7Q8Q.W9Y8R.U0U0U0U0', 
       role: 'admin',
@@ -26,7 +26,7 @@ const INITIAL_DATA = {
       leaderPhone: '9876543210',
       member2: 'Priya Patel',
       member3: 'Amit Deshmukh',
-      department: 'Metallurgy & Materials Engg',
+      department: 'Department of Mechanical Engineering',
       year: '3rd Year B.Tech',
       taskId: 1,
       taskTitle: 'Decarburization Zone Measurement',

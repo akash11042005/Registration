@@ -43,7 +43,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-metal-300 text-sm leading-relaxed mb-6 max-w-xs">
-              India's premier national Metallurgy & Materials Innovation Hackathon, hosted by the Department of Metallurgy & Materials Engineering, Walchand College of Engineering, Sangli.
+              India's premier national Metallurgy & Materials Innovation Hackathon, hosted by the Department of Mechanical Engineering, Walchand College of Engineering, Sangli.
             </p>
 
             {/* Contact info */}
@@ -103,7 +103,7 @@ export default function Footer() {
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-metal-500">
-            © 2026 AAYODHYAM. Organized by Dept. of Mechanical Engineering, WCE Sangli. All rights reserved.
+            © 2026 AAYODHYAM. Organized by Department of Mechanical Engineering, WCE Sangli. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <Link to="/rules" className="text-xs text-metal-500 hover:text-metal-300 transition-colors">Rules</Link>

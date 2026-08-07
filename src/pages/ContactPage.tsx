@@ -30,7 +30,7 @@ export default function ContactPage() {
           <motion.div {...fadeInUp} className="space-y-5">
             <h2 className="text-title text-navy-900">Organizer Contact</h2>
             <p className="text-sm text-metal-600 leading-relaxed">
-              For all queries related to AAYODHYAM 2026 — including registration, technical issues, payment verification, and lab access — please contact the Department of Metallurgy & Materials Engineering directly.
+              For all queries related to AAYODHYAM 2026 — including registration, technical issues, payment verification, and lab access — please contact the Department of Mechanical Engineering directly.
             </p>
 
             {[

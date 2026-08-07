@@ -478,8 +478,8 @@ export default function HomePage() {
               <div className="w-16 h-16 mx-auto rounded-2xl bg-gold-50 flex items-center justify-center mb-4">
                 <Microscope className="w-8 h-8 text-gold-600" />
               </div>
-              <h3 className="font-bold text-navy-900 mb-2">Dept. of Mechanical Engineering</h3>
-              <p className="text-sm text-metal-500">metallurgy@walchandsangli.ac.in</p>
+              <h3 className="font-bold text-navy-900 mb-2">Department of Mechanical Engineering</h3>
+              <p className="text-sm text-metal-500">aayodhyam@walchandsangli.ac.in</p>
               <p className="text-xs text-metal-400 mt-1">Hosting AAYODHYAM 2026</p>
             </motion.div>
           </div>

@@ -51,10 +51,10 @@ export default function AboutPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-4">
               <Microscope className="w-5 h-5" />
             </div>
-            <h2 className="text-title text-navy-900 mb-4">Dept. of Mechanical Engineering</h2>
+            <h2 className="text-title text-navy-900 mb-4">Department of Mechanical Engineering</h2>
             <div className="space-y-4 text-sm text-metal-600 leading-relaxed">
               <p>
-                The Department of Mechanical Engineering at WCE Sangli is one of Maharashtra's leading centers for metallurgical education and research. Established with a vision to produce industry-ready metallurgical engineers, the department has a strong legacy of academic excellence and applied research.
+                The Department of Mechanical Engineering at WCE Sangli is one of Maharashtra's leading centers for engineering education and research. Established with a vision to produce industry-ready engineers, the department has a strong legacy of academic excellence and applied research.
               </p>
               <p>
                 The department is equipped with modern metallurgical laboratories including optical and electron microscopy, heat treatment facilities, mechanical testing rigs, XRD, and computational tools. Faculty members are actively involved in research collaborations with Indian steel majors, automotive OEMs, and DRDO projects.

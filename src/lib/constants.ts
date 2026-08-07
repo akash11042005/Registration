@@ -19,7 +19,7 @@ export const BASE_REGISTRATION_FEE = 1; // TEMPORARY for testing — real price 
 export const HOME_DELIVERY_ADDON_FEE = 300;
 
 // UPI payment config
-export const UPI_ID = 'metallurgy@walchandsangli.ac.in';
+export const UPI_ID = 'aayodhyam@walchandsangli.ac.in';
 export const UPI_PAYEE_NAME = 'AAYODHYAM 2026 WCE';
 export const UPI_TRANSACTION_NOTE = 'AAYODHYAM2026 Registration Fee';
 
@@ -28,7 +28,7 @@ export const MAX_TEAMS_PER_TASK = 8;
 
 // Admin email allowlist (add multiple organizer/admin emails here)
 export const ADMIN_EMAILS: string[] = [
-  'metallurgy@walchandsangli.ac.in',
+  'aayodhyam@walchandsangli.ac.in',
   'admin@aayodhyam2026.in',
   // Add more admin emails here
 ];
@@ -43,7 +43,7 @@ export const ADMIN_LOGIN_EMAIL = 'admin@aayodhyam2026.in';
 
 // Organization info
 export const ORG = {
-  name: 'Department of Metallurgy & Materials Engineering',
+  name: 'Department of Mechanical Engineering',
   college: 'Walchand College of Engineering',
   location: 'Vishrambag, Sangli, Maharashtra – 416415',
   email: 'aayodhyam@walchandsangli.ac.in',
