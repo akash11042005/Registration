@@ -36,7 +36,7 @@ function getAuthHeader(): Record<string, string> {
 // scheduled time without touching the date itself.
 // ─────────────────────────────────────────────────
 export interface RegistrationControl {
-  opensAt: string; // ISO 8601, e.g. '2026-08-08T18:08:00+05:30'
+  opensAt: string; // ISO 8601, e.g. '2026-08-08T08:08:00+05:30'
   manuallyClosed: boolean;
   // Force-open override — makes registration accessible immediately
   // regardless of `opensAt`, without changing the scheduled date itself.
@@ -45,10 +45,10 @@ export interface RegistrationControl {
 }
 
 // Default used only if the settings doc hasn't been created yet in
-// Firestore — 6:08 PM IST, August 8, 2026 (chosen to give enough buffer
+// Firestore — 8:08 AM IST, August 8, 2026 (chosen to give enough buffer
 // after domain/DNS setup, with the 8/8 date reflected in the time too).
 const DEFAULT_REGISTRATION_CONTROL: RegistrationControl = {
-  opensAt: '2026-08-08T18:08:00+05:30',
+  opensAt: '2026-08-08T08:08:00+05:30',
   manuallyClosed: false,
   manuallyOpened: false,
 };
