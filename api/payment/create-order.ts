@@ -11,7 +11,7 @@ import { getAdminDb } from '../_lib/firebaseadmin.js';
 import { checkRateLimit, getCallerIp } from '../_lib/rateLimit.js';
 
 // Keep these in sync with src/lib/constants.ts
-const BASE_REGISTRATION_FEE = 1; // TEMPORARY for testing — real price is ₹300. Restore to 300 before the real event.
+const BASE_REGISTRATION_FEE = 300;
 const HOME_DELIVERY_ADDON_FEE = 300;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
