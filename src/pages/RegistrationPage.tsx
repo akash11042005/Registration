@@ -419,6 +419,20 @@ export default function RegistrationPage() {
             </div>
             {regControlLoading ? (
               <p className="text-sm text-metal-500">Loading…</p>
+            ) : manuallyClosed && msUntilOpen === 0 ? (
+              // The scheduled opensAt time has already passed, but the
+              // organizers are still manually holding registration closed
+              // (e.g. a payment gateway issue needs resolving first). In
+              // this state, quoting the original schedule ("scheduled to
+              // reopen on [a time already in the past]") reads as broken —
+              // so this shows a simple, honest "opening soon" message with
+              // no stale date and no all-zero countdown grid instead.
+              <>
+                <h2 className="text-title text-navy-900 mb-2">Registration Is Currently Closed</h2>
+                <p className="text-sm text-metal-600 mb-6">
+                  Team registration for AAYODHYAM 2026 is temporarily closed. It will open again shortly — this page unlocks automatically, no need to refresh. Please check back soon, or watch our announcements for updates.
+                </p>
+              </>
             ) : (
               <>
                 <h2 className="text-title text-navy-900 mb-2">
@@ -447,11 +461,6 @@ export default function RegistrationPage() {
                     </div>
                   ))}
                 </div>
-                {manuallyClosed && msUntilOpen === 0 && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mb-4">
-                    The scheduled time has already passed — registration is only staying closed because of the organizers' manual override, and will open as soon as they lift it.
-                  </p>
-                )}
               </>
             )}
             <Link to="/problem-statements" className="btn-outline justify-center">
