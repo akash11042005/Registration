@@ -15,7 +15,7 @@ export const EVENT_END_DATE = new Date('2026-09-18T17:00:00+05:30'); // Friday 5
 export const REGISTRATION_EDIT_DEADLINE = new Date('2026-09-14T09:00:00+05:30');
 
 // Registration fee (INR)
-export const BASE_REGISTRATION_FEE = 1; // TEMPORARY for testing — real price is ₹300. Restore to 300 before the real event.
+export const BASE_REGISTRATION_FEE = 300;
 export const HOME_DELIVERY_ADDON_FEE = 300;
 
 // UPI payment config
