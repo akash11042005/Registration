@@ -827,22 +827,6 @@ export default function RegistrationPage() {
                 </div>
               </div>
 
-              {/* Add-on Option */}
-              <div className="p-4 bg-gold-50/50 border border-gold-200 rounded-xl flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="homeDelivery"
-                  {...step2Form.register('wantsHomeDelivery')}
-                  className="mt-1 rounded border-gold-300 text-gold-600 focus:ring-gold-500"
-                />
-                <label htmlFor="homeDelivery" className="text-xs text-metal-700 cursor-pointer">
-                  <span className="font-bold text-navy-900 block mb-0.5">
-                    Optional Add-on: Request Home / College Delivery of Raw Materials (+₹300)
-                  </span>
-                  Check this box if your team requires pre-characterized raw steel specimens shipped directly to your institution prior to the hackathon.
-                </label>
-              </div>
-
               <div className="p-3 bg-navy-50 border border-navy-100 rounded-xl flex items-start gap-2.5 text-xs text-navy-800">
                 <ShieldCheck className="w-4 h-4 text-navy-700 shrink-0 mt-0.5" />
                 <p>
