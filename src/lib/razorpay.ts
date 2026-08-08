@@ -108,13 +108,31 @@ export async function payWithRazorpay(params: {
     contact: string;
     taskId: number;
     uid: string;
+    registration: {
+        teamName: string;
+        leaderName: string;
+        leaderEmail: string;
+        leaderPhone: string;
+        collegeName: string;
+        member1Name?: string;
+        member2Name?: string;
+        mentorName?: string;
+        mentorEmail?: string;
+        mentorPhone?: string;
+        taskId: number;
+        taskTitle: string;
+        uid: string;
+    };
 }): Promise<RazorpaySuccessPayload> {
     await loadRazorpayScript();
 
-    const orderRes = await fetch('/api/payment/create-order', {
+    const orderRes = await authFetch('/api/payment/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wantsHomeDelivery: params.wantsHomeDelivery }),
+        body: JSON.stringify({
+            wantsHomeDelivery: params.wantsHomeDelivery,
+            registration: { ...params.registration, wantsHomeDelivery: params.wantsHomeDelivery },
+        }),
     });
 
     if (!orderRes.ok) {

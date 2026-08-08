@@ -299,6 +299,21 @@ export default function RegistrationPage() {
         contact: step1.leaderPhone,
         taskId: step1.taskId,
         uid: user.uid,
+        registration: {
+          teamName: step1.teamName,
+          leaderName: step1.leaderName,
+          leaderEmail: step1.leaderEmail,
+          leaderPhone: step1.leaderPhone,
+          collegeName: step1.collegeName,
+          member1Name: step1.member1Name || undefined,
+          member2Name: step1.member2Name || undefined,
+          mentorName: step1.mentorName,
+          mentorEmail: step1.mentorEmail || undefined,
+          mentorPhone: step1.mentorPhone || undefined,
+          taskId: step1.taskId,
+          taskTitle: selectedTask?.title || 'Custom Problem Statement',
+          uid: user.uid,
+        },
       });
 
       const verifyRes = await authFetch('/api/payment/verify', {
