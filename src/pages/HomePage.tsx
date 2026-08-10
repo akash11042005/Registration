@@ -345,7 +345,7 @@ export default function HomePage() {
                   style={{ aspectRatio: '9 / 16' }}
                 >
                   <video
-                    className="w-full h-full object-cover"
+                    className="aay-overview-video w-full h-full object-cover"
                     controls
                     playsInline
                     preload="metadata"
@@ -354,6 +354,13 @@ export default function HomePage() {
                     Your browser doesn't support embedded video.{' '}
                     <a href="/videos/Overview.mp4" className="underline">Download the video</a> instead.
                   </video>
+                  <style>{`
+                    .aay-overview-video:fullscreen,
+                    .aay-overview-video:-webkit-full-screen {
+                      object-fit: contain;
+                      background: black;
+                    }
+                  `}</style>
                 </div>
               </div>
             </motion.div>
