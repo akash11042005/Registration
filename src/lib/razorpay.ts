@@ -115,13 +115,13 @@ export async function payWithRazorpay(params: {
         leaderPhone: string;
         collegeName: string;
         leaderYear: string;
+        leaderBranch: string;
         member1Name?: string;
         member1Year?: string;
+        member1Branch?: string;
         member2Name?: string;
         member2Year?: string;
-        mentorName?: string;
-        mentorEmail?: string;
-        mentorPhone?: string;
+        member2Branch?: string;
         taskId: number;
         taskTitle: string;
         uid: string;

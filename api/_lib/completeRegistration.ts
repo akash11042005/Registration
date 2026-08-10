@@ -18,13 +18,13 @@ export interface RegistrationInput {
     leaderPhone: string;
     collegeName: string;
     leaderYear: string;
+    leaderBranch: string;
     member1Name?: string | null;
     member1Year?: string | null;
+    member1Branch?: string | null;
     member2Name?: string | null;
     member2Year?: string | null;
-    mentorName?: string | null;
-    mentorEmail?: string | null;
-    mentorPhone?: string | null;
+    member2Branch?: string | null;
     taskId: number;
     taskTitle: string;
     uid: string;
@@ -41,6 +41,7 @@ export function isValidRegistration(x: unknown): x is RegistrationInput {
         typeof r.leaderPhone === 'string' &&
         typeof r.collegeName === 'string' &&
         typeof r.leaderYear === 'string' &&
+        typeof r.leaderBranch === 'string' &&
         typeof r.taskId === 'number' &&
         typeof r.uid === 'string'
     );
@@ -79,13 +80,13 @@ export async function completeRegistration(
         leaderPhone: registration.leaderPhone.trim(),
         collegeName: registration.collegeName.trim(),
         leaderYear: registration.leaderYear.trim(),
+        leaderBranch: registration.leaderBranch.trim(),
         member1Name: registration.member1Name?.trim() || null,
         member1Year: registration.member1Year?.trim() || null,
+        member1Branch: registration.member1Branch?.trim() || null,
         member2Name: registration.member2Name?.trim() || null,
         member2Year: registration.member2Year?.trim() || null,
-        mentorName: registration.mentorName?.trim() || null,
-        mentorEmail: registration.mentorEmail?.trim() || null,
-        mentorPhone: registration.mentorPhone?.trim() || null,
+        member2Branch: registration.member2Branch?.trim() || null,
         taskId: registration.taskId,
         taskTitle: registration.taskTitle,
         transactionId: razorpay_payment_id,

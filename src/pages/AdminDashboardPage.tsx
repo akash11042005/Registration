@@ -589,7 +589,7 @@ export default function AdminDashboardPage() {
                     <tr className="bg-metal-100 border-b border-metal-200 text-metal-600 font-bold uppercase tracking-wider">
                       <th className="p-3">ID / Date</th>
                       <th className="p-3">Team &amp; Leader</th>
-                      <th className="p-3">College &amp; Mentor</th>
+                      <th className="p-3">College</th>
                       <th className="p-3">Task Allocated</th>
                       <th className="p-3">UTR / Payment</th>
                       <th className="p-3">Status</th>
@@ -608,21 +608,22 @@ export default function AdminDashboardPage() {
                             <span className="font-bold text-navy-900 block">{reg.teamName}</span>
                             <span className="text-metal-600">
                               {reg.leaderName} ({reg.leaderEmail})
-                              {reg.leaderYear && (
-                                <span className="text-[10px] text-navy-500 font-semibold"> · {reg.leaderYear}</span>
+                              {(reg.leaderYear || reg.leaderBranch) && (
+                                <span className="text-[10px] text-navy-500 font-semibold">
+                                  {' '}· {[reg.leaderYear, reg.leaderBranch].filter(Boolean).join(' · ')}
+                                </span>
                               )}
                             </span>
                             <span className="text-[10px] text-metal-400 block mt-0.5">
                               Members:{' '}
                               {[
-                                reg.member1Name && `${reg.member1Name}${reg.member1Year ? ` (${reg.member1Year})` : ''}`,
-                                reg.member2Name && `${reg.member2Name}${reg.member2Year ? ` (${reg.member2Year})` : ''}`,
+                                reg.member1Name && `${reg.member1Name}${[reg.member1Year, reg.member1Branch].filter(Boolean).length ? ` (${[reg.member1Year, reg.member1Branch].filter(Boolean).join(' · ')})` : ''}`,
+                                reg.member2Name && `${reg.member2Name}${[reg.member2Year, reg.member2Branch].filter(Boolean).length ? ` (${[reg.member2Year, reg.member2Branch].filter(Boolean).join(' · ')})` : ''}`,
                               ].filter(Boolean).join(', ') || '—'}
                             </span>
                           </td>
                           <td className="p-3">
                             <span className="text-metal-700 block font-medium">{reg.collegeName}</span>
-                            <span className="text-[10px] text-metal-500">Mentor: {reg.mentorName}</span>
                           </td>
                           <td className="p-3 max-w-xs">
                             <span className="font-bold text-navy-900 block truncate">#{reg.taskId}: {reg.taskTitle}</span>

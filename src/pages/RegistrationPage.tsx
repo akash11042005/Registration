@@ -36,6 +36,24 @@ import {
 import { Registration } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+// Fixed option lists so "Year of Study" and "Branch" are always
+// clean, comparable values — a free-text box previously let a
+// student type "BTech" into the year field instead of an actual year.
+const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+const BRANCH_OPTIONS = [
+  'Metallurgy & Materials Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Electrical Engineering',
+  'Electronics & Telecommunication',
+  'Computer Engineering',
+  'Information Technology',
+  'Chemical Engineering',
+  'Instrumentation Engineering',
+  'Production Engineering',
+  'Other',
+];
+
 // ─────────────────────────────────────────────────
 // Zod schemas per step
 // ─────────────────────────────────────────────────
@@ -46,13 +64,13 @@ const step1Schema = z.object({
   leaderPhone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit mobile number'),
   collegeName: z.string().min(2, 'College name is required'),
   leaderYear: z.string().min(1, 'Year of study is required'),
+  leaderBranch: z.string().min(1, 'Branch is required'),
   member1Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
   member1Year: z.string().optional(),
+  member1Branch: z.string().optional(),
   member2Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
   member2Year: z.string().optional(),
-  mentorName: z.string().optional(),
-  mentorEmail: z.union([z.string().email('Enter a valid email'), z.literal('')]).optional(),
-  mentorPhone: z.union([z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit number'), z.literal('')]).optional(),
+  member2Branch: z.string().optional(),
   taskId: z.number({ message: 'Please select a problem statement' }),
 });
 
@@ -111,13 +129,13 @@ export default function RegistrationPage() {
       leaderPhone: '',
       collegeName: '',
       leaderYear: '',
+      leaderBranch: '',
       member1Name: '',
       member1Year: '',
+      member1Branch: '',
       member2Name: '',
       member2Year: '',
-      mentorName: '',
-      mentorEmail: '',
-      mentorPhone: '',
+      member2Branch: '',
       taskId: defaultTaskId,
     },
   });
@@ -263,13 +281,13 @@ export default function RegistrationPage() {
           leaderPhone: step1.leaderPhone,
           collegeName: step1.collegeName,
           leaderYear: step1.leaderYear,
+          leaderBranch: step1.leaderBranch,
           member1Name: step1.member1Name || undefined,
           member1Year: step1.member1Year || undefined,
+          member1Branch: step1.member1Branch || undefined,
           member2Name: step1.member2Name || undefined,
           member2Year: step1.member2Year || undefined,
-          mentorName: step1.mentorName,
-          mentorEmail: step1.mentorEmail || undefined,
-          mentorPhone: step1.mentorPhone || undefined,
+          member2Branch: step1.member2Branch || undefined,
           taskId: step1.taskId,
           taskTitle: selectedTask?.title || 'Custom Problem Statement',
           uid: user.uid,
@@ -289,13 +307,13 @@ export default function RegistrationPage() {
             leaderPhone: step1.leaderPhone,
             collegeName: step1.collegeName,
             leaderYear: step1.leaderYear,
+            leaderBranch: step1.leaderBranch,
             member1Name: step1.member1Name || undefined,
             member1Year: step1.member1Year || undefined,
+            member1Branch: step1.member1Branch || undefined,
             member2Name: step1.member2Name || undefined,
             member2Year: step1.member2Year || undefined,
-            mentorName: step1.mentorName,
-            mentorEmail: step1.mentorEmail || undefined,
-            mentorPhone: step1.mentorPhone || undefined,
+            member2Branch: step1.member2Branch || undefined,
             taskId: step1.taskId,
             taskTitle: selectedTask?.title || 'Custom Problem Statement',
             uid: user.uid,
@@ -531,7 +549,7 @@ export default function RegistrationPage() {
               <div className="border-b border-metal-100 pb-4">
                 <h2 className="text-title text-navy-900 text-lg font-bold">Step 1: Team & Task Selection</h2>
                 <p className="text-xs text-metal-500 mt-1">
-                  Enter your team leader, member, and mentor details, then confirm your problem statement.
+                  Enter your team leader and member details, then confirm your problem statement.
                 </p>
               </div>
 
@@ -613,14 +631,35 @@ export default function RegistrationPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="form-label" htmlFor="leaderYear">Year of Study *</label>
-                    <input
+                    <select
                       {...step1Form.register('leaderYear')}
                       id="leaderYear"
                       className={cn('form-input', step1Form.formState.errors.leaderYear && 'border-red-400')}
-                      placeholder="e.g. 3rd Year"
-                    />
+                    >
+                      <option value="">Select year</option>
+                      {YEAR_OPTIONS.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
                     {step1Form.formState.errors.leaderYear && (
                       <p className="form-error">{step1Form.formState.errors.leaderYear.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="leaderBranch">Branch *</label>
+                    <select
+                      {...step1Form.register('leaderBranch')}
+                      id="leaderBranch"
+                      className={cn('form-input', step1Form.formState.errors.leaderBranch && 'border-red-400')}
+                    >
+                      <option value="">Select branch</option>
+                      {BRANCH_OPTIONS.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                    {step1Form.formState.errors.leaderBranch && (
+                      <p className="form-error">{step1Form.formState.errors.leaderBranch.message}</p>
                     )}
                   </div>
                 </div>
@@ -645,16 +684,29 @@ export default function RegistrationPage() {
 
                   <div>
                     <label className="form-label" htmlFor="member1Year">Member 1 Year of Study (Optional)</label>
-                    <input
-                      {...step1Form.register('member1Year')}
-                      id="member1Year"
-                      className="form-input"
-                      placeholder="e.g. 2nd Year"
-                    />
+                    <select {...step1Form.register('member1Year')} id="member1Year" className="form-input">
+                      <option value="">Select year</option>
+                      {YEAR_OPTIONS.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label" htmlFor="member1Branch">Member 1 Branch (Optional)</label>
+                    <select {...step1Form.register('member1Branch')} id="member1Branch" className="form-input">
+                      <option value="">Select branch</option>
+                      {BRANCH_OPTIONS.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4 pt-2">
                   <div>
                     <label className="form-label" htmlFor="member2Name">Member 2 Name (Optional)</label>
                     <input
@@ -670,13 +722,26 @@ export default function RegistrationPage() {
 
                   <div>
                     <label className="form-label" htmlFor="member2Year">Member 2 Year of Study (Optional)</label>
-                    <input
-                      {...step1Form.register('member2Year')}
-                      id="member2Year"
-                      className="form-input"
-                      placeholder="e.g. 2nd Year"
-                    />
+                    <select {...step1Form.register('member2Year')} id="member2Year" className="form-input">
+                      <option value="">Select year</option>
+                      {YEAR_OPTIONS.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
                   </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label" htmlFor="member2Branch">Member 2 Branch (Optional)</label>
+                    <select {...step1Form.register('member2Branch')} id="member2Branch" className="form-input">
+                      <option value="">Select branch</option>
+                      {BRANCH_OPTIONS.map((b) => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div />
                 </div>
                 <p className="text-xs text-metal-500">A team can be just the leader, or the leader plus up to 2 additional members (max team size: 3).</p>
               </div>
@@ -864,8 +929,10 @@ export default function RegistrationPage() {
                       <p className="font-semibold text-navy-900">{step1Form.getValues('leaderName')}</p>
                     </div>
                     <div>
-                      <span className="text-metal-500">Leader Year of Study:</span>
-                      <p className="font-semibold text-navy-900">{step1Form.getValues('leaderYear')}</p>
+                      <span className="text-metal-500">Leader Year / Branch:</span>
+                      <p className="font-semibold text-navy-900">
+                        {step1Form.getValues('leaderYear')} · {step1Form.getValues('leaderBranch')}
+                      </p>
                     </div>
                     <div>
                       <span className="text-metal-500">Leader Email:</span>
@@ -880,7 +947,8 @@ export default function RegistrationPage() {
                         <span className="text-metal-500">Member 1:</span>
                         <p className="font-semibold text-navy-900">
                           {step1Form.getValues('member1Name')}
-                          {step1Form.getValues('member1Year') ? ` (${step1Form.getValues('member1Year')})` : ''}
+                          {(step1Form.getValues('member1Year') || step1Form.getValues('member1Branch')) &&
+                            ` (${[step1Form.getValues('member1Year'), step1Form.getValues('member1Branch')].filter(Boolean).join(' · ')})`}
                         </p>
                       </div>
                     )}
@@ -889,7 +957,8 @@ export default function RegistrationPage() {
                         <span className="text-metal-500">Member 2:</span>
                         <p className="font-semibold text-navy-900">
                           {step1Form.getValues('member2Name')}
-                          {step1Form.getValues('member2Year') ? ` (${step1Form.getValues('member2Year')})` : ''}
+                          {(step1Form.getValues('member2Year') || step1Form.getValues('member2Branch')) &&
+                            ` (${[step1Form.getValues('member2Year'), step1Form.getValues('member2Branch')].filter(Boolean).join(' · ')})`}
                         </p>
                       </div>
                     )}

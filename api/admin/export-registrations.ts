@@ -30,13 +30,13 @@ interface RegistrationRecord {
     leaderPhone?: string;
     collegeName?: string;
     leaderYear?: string;
+    leaderBranch?: string;
     member1Name?: string;
     member1Year?: string;
+    member1Branch?: string;
     member2Name?: string;
     member2Year?: string;
-    mentorName?: string;
-    mentorEmail?: string;
-    mentorPhone?: string;
+    member2Branch?: string;
     taskId?: number;
     taskTitle?: string;
     wantsHomeDelivery?: boolean;
@@ -53,16 +53,16 @@ function toFullRow(r: RegistrationRecord) {
         'Team Name': r.teamName || '',
         "Leader's Name": r.leaderName || '',
         'Leader Year of Study': r.leaderYear || '',
+        'Leader Branch': r.leaderBranch || '',
         'Leader Email': r.leaderEmail || '',
         'Leader Phone': r.leaderPhone || '',
         'College Name': r.collegeName || '',
         'Member 1': r.member1Name || '',
         'Member 1 Year of Study': r.member1Year || '',
+        'Member 1 Branch': r.member1Branch || '',
         'Member 2': r.member2Name || '',
         'Member 2 Year of Study': r.member2Year || '',
-        "Mentor's Name": r.mentorName || '',
-        'Mentor Email': r.mentorEmail || '',
-        'Mentor Phone': r.mentorPhone || '',
+        'Member 2 Branch': r.member2Branch || '',
         'Problem Statement ID': r.taskId ?? '',
         'Problem Statement Chosen': r.taskTitle || '',
         'Wants Home Delivery': r.wantsHomeDelivery ? 'Yes' : 'No',
@@ -92,16 +92,16 @@ function buildXlsx(regs: RegistrationRecord[]): Buffer {
         { wch: 22 }, // Team Name
         { wch: 20 }, // Leader's Name
         { wch: 14 }, // Leader Year of Study
+        { wch: 26 }, // Leader Branch
         { wch: 28 }, // Leader Email
         { wch: 14 }, // Leader Phone
         { wch: 26 }, // College Name
         { wch: 18 }, // Member 1
         { wch: 14 }, // Member 1 Year of Study
+        { wch: 26 }, // Member 1 Branch
         { wch: 18 }, // Member 2
         { wch: 14 }, // Member 2 Year of Study
-        { wch: 20 }, // Mentor's Name
-        { wch: 24 }, // Mentor Email
-        { wch: 14 }, // Mentor Phone
+        { wch: 26 }, // Member 2 Branch
         { wch: 8 },  // Problem Statement ID
         { wch: 38 }, // Problem Statement Chosen
         { wch: 12 }, // Wants Home Delivery
@@ -118,18 +118,20 @@ function buildXlsx(regs: RegistrationRecord[]): Buffer {
 // PDF export deliberately uses a smaller, print-friendly column set (not
 // all 21 fields from the CSV/Excel exports) — a landscape table with every
 // field would run off the page width and be unreadable. This covers the
-// core "who, what year, what task, paid or not" summary a printed/shared
-// report actually needs. Only the leader's year is shown here (not member
-// years) to keep the row readable — the full breakdown is in CSV/Excel.
+// core "who, what year/branch, what task, paid or not" summary a printed/
+// shared report actually needs. Only the leader's year and branch are
+// shown here (not member details) to keep the row readable — the full
+// breakdown is in CSV/Excel.
 const PDF_COLUMNS: { label: string; width: number; get: (r: RegistrationRecord) => string }[] = [
-    { label: 'Reg ID', width: 65, get: (r) => r.registrationId || '' },
-    { label: 'Team Name', width: 85, get: (r) => r.teamName || '' },
-    { label: "Leader's Name", width: 85, get: (r) => r.leaderName || '' },
-    { label: 'Year', width: 45, get: (r) => r.leaderYear || '' },
-    { label: 'Phone', width: 65, get: (r) => r.leaderPhone || '' },
-    { label: 'College', width: 110, get: (r) => r.collegeName || '' },
-    { label: 'Problem Statement', width: 130, get: (r) => (r.taskId ? `#${r.taskId} ${r.taskTitle || ''}` : r.taskTitle || '') },
-    { label: 'Status', width: 55, get: (r) => r.paymentStatus || '' },
+    { label: 'Reg ID', width: 60, get: (r) => r.registrationId || '' },
+    { label: 'Team Name', width: 80, get: (r) => r.teamName || '' },
+    { label: "Leader's Name", width: 80, get: (r) => r.leaderName || '' },
+    { label: 'Year', width: 40, get: (r) => r.leaderYear || '' },
+    { label: 'Branch', width: 90, get: (r) => r.leaderBranch || '' },
+    { label: 'Phone', width: 60, get: (r) => r.leaderPhone || '' },
+    { label: 'College', width: 95, get: (r) => r.collegeName || '' },
+    { label: 'Problem Statement', width: 115, get: (r) => (r.taskId ? `#${r.taskId} ${r.taskTitle || ''}` : r.taskTitle || '') },
+    { label: 'Status', width: 50, get: (r) => r.paymentStatus || '' },
 ];
 
 function buildPdf(regs: RegistrationRecord[]): Promise<Buffer> {
