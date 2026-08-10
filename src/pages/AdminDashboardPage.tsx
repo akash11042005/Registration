@@ -606,9 +606,18 @@ export default function AdminDashboardPage() {
                           </td>
                           <td className="p-3">
                             <span className="font-bold text-navy-900 block">{reg.teamName}</span>
-                            <span className="text-metal-600">{reg.leaderName} ({reg.leaderEmail})</span>
+                            <span className="text-metal-600">
+                              {reg.leaderName} ({reg.leaderEmail})
+                              {reg.leaderYear && (
+                                <span className="text-[10px] text-navy-500 font-semibold"> · {reg.leaderYear}</span>
+                              )}
+                            </span>
                             <span className="text-[10px] text-metal-400 block mt-0.5">
-                              Members: {[reg.member1Name, reg.member2Name].filter(Boolean).join(', ') || '—'}
+                              Members:{' '}
+                              {[
+                                reg.member1Name && `${reg.member1Name}${reg.member1Year ? ` (${reg.member1Year})` : ''}`,
+                                reg.member2Name && `${reg.member2Name}${reg.member2Year ? ` (${reg.member2Year})` : ''}`,
+                              ].filter(Boolean).join(', ') || '—'}
                             </span>
                           </td>
                           <td className="p-3">

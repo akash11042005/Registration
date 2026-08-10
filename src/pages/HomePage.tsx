@@ -313,6 +313,54 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Know More: Overview Video ──
+          Vertical (9:16) explainer video, shown as a phone-style player.
+          Capped to a fixed max-width on all breakpoints rather than going
+          full-bleed — a portrait video stretched across a wide desktop
+          viewport would look thin and awkward, so it stays phone-sized and
+          centered instead, with the two-column grid naturally stacking to
+          a single column on small screens. */}
+      <section className="section-padding bg-navy-950 relative overflow-hidden">
+        <LatticeSVG />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div {...fadeInUp}>
+              <span className="section-label text-gold-400">Know More</span>
+              <h2 className="text-headline text-white mb-4">
+                See What AAYODHYAM Is, In Under Two Minutes
+              </h2>
+              <p className="text-body-lg text-metal-400 mb-6 max-w-lg">
+                A quick walkthrough of what this event actually involves — real lab challenges, how registration and evaluation work, and why it's worth your time. Useful whether you're a teacher deciding which students to point toward it, or a student still unsure what you'd be signing up for.
+              </p>
+              <Link to="/about" className="btn-outline border-white/30 text-white hover:bg-white/10 hover:text-white">
+                More About the Event
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
+
+            <motion.div {...fadeInUp} className="flex justify-center">
+              <div className="relative w-full max-w-[300px] sm:max-w-[320px]">
+                <div
+                  className="relative rounded-[2rem] border-4 border-white/10 bg-black overflow-hidden shadow-elevated"
+                  style={{ aspectRatio: '9 / 16' }}
+                >
+                  <video
+                    className="w-full h-full object-cover"
+                    controls
+                    playsInline
+                    preload="metadata"
+                  >
+                    <source src="/videos/Overview.mp4" type="video/mp4" />
+                    Your browser doesn't support embedded video.{' '}
+                    <a href="/videos/Overview.mp4" className="underline">Download the video</a> instead.
+                  </video>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Why Participate ── */}
       <section className="section-padding bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

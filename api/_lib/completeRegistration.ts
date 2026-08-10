@@ -17,8 +17,11 @@ export interface RegistrationInput {
     leaderEmail: string;
     leaderPhone: string;
     collegeName: string;
+    leaderYear: string;
     member1Name?: string | null;
+    member1Year?: string | null;
     member2Name?: string | null;
+    member2Year?: string | null;
     mentorName?: string | null;
     mentorEmail?: string | null;
     mentorPhone?: string | null;
@@ -37,6 +40,7 @@ export function isValidRegistration(x: unknown): x is RegistrationInput {
         typeof r.leaderEmail === 'string' &&
         typeof r.leaderPhone === 'string' &&
         typeof r.collegeName === 'string' &&
+        typeof r.leaderYear === 'string' &&
         typeof r.taskId === 'number' &&
         typeof r.uid === 'string'
     );
@@ -74,8 +78,11 @@ export async function completeRegistration(
         leaderEmail: registration.leaderEmail.trim(),
         leaderPhone: registration.leaderPhone.trim(),
         collegeName: registration.collegeName.trim(),
+        leaderYear: registration.leaderYear.trim(),
         member1Name: registration.member1Name?.trim() || null,
+        member1Year: registration.member1Year?.trim() || null,
         member2Name: registration.member2Name?.trim() || null,
+        member2Year: registration.member2Year?.trim() || null,
         mentorName: registration.mentorName?.trim() || null,
         mentorEmail: registration.mentorEmail?.trim() || null,
         mentorPhone: registration.mentorPhone?.trim() || null,

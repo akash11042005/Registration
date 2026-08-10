@@ -29,8 +29,11 @@ interface RegistrationRecord {
     leaderEmail?: string;
     leaderPhone?: string;
     collegeName?: string;
+    leaderYear?: string;
     member1Name?: string;
+    member1Year?: string;
     member2Name?: string;
+    member2Year?: string;
     mentorName?: string;
     mentorEmail?: string;
     mentorPhone?: string;
@@ -49,11 +52,14 @@ function toFullRow(r: RegistrationRecord) {
         'Registration ID': r.registrationId || '',
         'Team Name': r.teamName || '',
         "Leader's Name": r.leaderName || '',
+        'Leader Year of Study': r.leaderYear || '',
         'Leader Email': r.leaderEmail || '',
         'Leader Phone': r.leaderPhone || '',
         'College Name': r.collegeName || '',
         'Member 1': r.member1Name || '',
+        'Member 1 Year of Study': r.member1Year || '',
         'Member 2': r.member2Name || '',
+        'Member 2 Year of Study': r.member2Year || '',
         "Mentor's Name": r.mentorName || '',
         'Mentor Email': r.mentorEmail || '',
         'Mentor Phone': r.mentorPhone || '',
@@ -79,12 +85,30 @@ function buildXlsx(regs: RegistrationRecord[]): Buffer {
     const rows = regs.map(toFullRow);
     const worksheet = XLSX.utils.json_to_sheet(rows);
     // Reasonable column widths so the sheet is readable without the admin
-    // having to manually resize every column after opening it.
+    // having to manually resize every column after opening it. Order and
+    // count must match toFullRow's keys above exactly (21 columns).
     worksheet['!cols'] = [
-        { wch: 16 }, { wch: 22 }, { wch: 20 }, { wch: 28 }, { wch: 14 },
-        { wch: 26 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 24 },
-        { wch: 14 }, { wch: 8 }, { wch: 38 }, { wch: 12 }, { wch: 12 },
-        { wch: 22 }, { wch: 14 }, { wch: 22 },
+        { wch: 16 }, // Registration ID
+        { wch: 22 }, // Team Name
+        { wch: 20 }, // Leader's Name
+        { wch: 14 }, // Leader Year of Study
+        { wch: 28 }, // Leader Email
+        { wch: 14 }, // Leader Phone
+        { wch: 26 }, // College Name
+        { wch: 18 }, // Member 1
+        { wch: 14 }, // Member 1 Year of Study
+        { wch: 18 }, // Member 2
+        { wch: 14 }, // Member 2 Year of Study
+        { wch: 20 }, // Mentor's Name
+        { wch: 24 }, // Mentor Email
+        { wch: 14 }, // Mentor Phone
+        { wch: 8 },  // Problem Statement ID
+        { wch: 38 }, // Problem Statement Chosen
+        { wch: 12 }, // Wants Home Delivery
+        { wch: 12 }, // Total Fee
+        { wch: 22 }, // Razorpay Payment ID
+        { wch: 14 }, // Payment Status
+        { wch: 22 }, // Registered At
     ];
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Registrations');
@@ -92,18 +116,20 @@ function buildXlsx(regs: RegistrationRecord[]): Buffer {
 }
 
 // PDF export deliberately uses a smaller, print-friendly column set (not
-// all 18 fields from the CSV/Excel exports) — a landscape table with every
+// all 21 fields from the CSV/Excel exports) — a landscape table with every
 // field would run off the page width and be unreadable. This covers the
-// core "who, what task, paid or not" summary a printed/shared report
-// actually needs.
+// core "who, what year, what task, paid or not" summary a printed/shared
+// report actually needs. Only the leader's year is shown here (not member
+// years) to keep the row readable — the full breakdown is in CSV/Excel.
 const PDF_COLUMNS: { label: string; width: number; get: (r: RegistrationRecord) => string }[] = [
-    { label: 'Reg ID', width: 70, get: (r) => r.registrationId || '' },
-    { label: 'Team Name', width: 90, get: (r) => r.teamName || '' },
-    { label: "Leader's Name", width: 90, get: (r) => r.leaderName || '' },
-    { label: 'Phone', width: 70, get: (r) => r.leaderPhone || '' },
-    { label: 'College', width: 130, get: (r) => r.collegeName || '' },
-    { label: 'Problem Statement', width: 140, get: (r) => (r.taskId ? `#${r.taskId} ${r.taskTitle || ''}` : r.taskTitle || '') },
-    { label: 'Status', width: 60, get: (r) => r.paymentStatus || '' },
+    { label: 'Reg ID', width: 65, get: (r) => r.registrationId || '' },
+    { label: 'Team Name', width: 85, get: (r) => r.teamName || '' },
+    { label: "Leader's Name", width: 85, get: (r) => r.leaderName || '' },
+    { label: 'Year', width: 45, get: (r) => r.leaderYear || '' },
+    { label: 'Phone', width: 65, get: (r) => r.leaderPhone || '' },
+    { label: 'College', width: 110, get: (r) => r.collegeName || '' },
+    { label: 'Problem Statement', width: 130, get: (r) => (r.taskId ? `#${r.taskId} ${r.taskTitle || ''}` : r.taskTitle || '') },
+    { label: 'Status', width: 55, get: (r) => r.paymentStatus || '' },
 ];
 
 function buildPdf(regs: RegistrationRecord[]): Promise<Buffer> {

@@ -75,9 +75,9 @@ service cloud.firestore {
       allow update: if isSignedIn() &&
         resource.data.uid == request.auth.uid &&
         request.time < (timestamp.date(2026, 9, 14) + duration.value(210, 'm')) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'teamName', 'leaderPhone', 'collegeName',
-          'member1Name', 'member2Name',
+       request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'teamName', 'leaderPhone', 'collegeName', 'leaderYear',
+          'member1Name', 'member1Year', 'member2Name', 'member2Year',
           'mentorName', 'mentorEmail', 'mentorPhone'
         ]);
 

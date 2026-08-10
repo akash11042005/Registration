@@ -114,8 +114,11 @@ export async function payWithRazorpay(params: {
         leaderEmail: string;
         leaderPhone: string;
         collegeName: string;
+        leaderYear: string;
         member1Name?: string;
+        member1Year?: string;
         member2Name?: string;
+        member2Year?: string;
         mentorName?: string;
         mentorEmail?: string;
         mentorPhone?: string;

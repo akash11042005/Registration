@@ -45,8 +45,11 @@ const step1Schema = z.object({
   leaderEmail: z.string().email('Valid email is required'),
   leaderPhone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit mobile number'),
   collegeName: z.string().min(2, 'College name is required'),
+  leaderYear: z.string().min(1, 'Year of study is required'),
   member1Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  member1Year: z.string().optional(),
   member2Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  member2Year: z.string().optional(),
   mentorName: z.string().optional(),
   mentorEmail: z.union([z.string().email('Enter a valid email'), z.literal('')]).optional(),
   mentorPhone: z.union([z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit number'), z.literal('')]).optional(),
@@ -72,11 +75,6 @@ export default function RegistrationPage() {
   const { data: existingRegistration, isLoading: checkingExistingRegistration } = useRegistrationByUid(user?.uid);
   const qc = useQueryClient();
 
-  // Registration open/close gate — see useRegistrationControl in
-  // useFirestore.ts. `regControlLoading` matters here: while this is still
-  // fetching, we do NOT want to briefly flash the real form before we know
-  // whether registration is actually open, so the gate below treats
-  // "still loading" the same as "not open yet."
   const { data: regControl, isLoading: regControlLoading, isError: regControlError, refetch: refetchRegControl } = useRegistrationControl();
   const [nowTick, setNowTick] = useState(Date.now());
   useEffect(() => {
@@ -84,22 +82,12 @@ export default function RegistrationPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Self-heal stale/abandoned slot holds on mount — mirrors the same call in
-  // ProblemStatementsPage.tsx. Without this, a user who lands directly on
-  // /register (skipping the problem-statements browse page) could see a task
-  // shown as full/near-full because of an abandoned checkout's expired hold
-  // that nothing has reconciled yet, wrongly blocking or discouraging them
-  // from a task that actually still has room.
   useEffect(() => {
     fetch('/api/payment/cleanup-stale-holds', { method: 'POST' })
       .then(() => qc.invalidateQueries({ queryKey: ['taskCounts'] }))
       .catch(() => { });
   }, [qc]);
 
-  // A signed-in user who already has a registration shouldn't be able to pay
-  // again and end up with a second one — send them to their dashboard instead.
-  // (The server-side guard in api/payment/verify.ts is the real backstop —
-  // this is just so a returning user never gets this far in the first place.)
   useEffect(() => {
     if (!checkingExistingRegistration && existingRegistration) {
       navigate('/dashboard', { replace: true });
@@ -114,7 +102,6 @@ export default function RegistrationPage() {
   const activeHoldRef = useRef<{ holdId: string; expiresAt: number } | null>(null);
   const [completedRegistration, setCompletedRegistration] = useState<Registration | null>(null);
 
-  // Form states
   const step1Form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
     defaultValues: {
@@ -123,8 +110,11 @@ export default function RegistrationPage() {
       leaderEmail: user?.email || '',
       leaderPhone: '',
       collegeName: '',
+      leaderYear: '',
       member1Name: '',
+      member1Year: '',
       member2Name: '',
+      member2Year: '',
       mentorName: '',
       mentorEmail: '',
       mentorPhone: '',
@@ -139,7 +129,6 @@ export default function RegistrationPage() {
     },
   });
 
-  // Restore draft from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(DRAFT_KEY);
     if (saved) {
@@ -151,7 +140,6 @@ export default function RegistrationPage() {
     }
   }, []);
 
-  // Sync leader email/name if user loads after mount
   useEffect(() => {
     if (user) {
       if (!step1Form.getValues('leaderEmail')) step1Form.setValue('leaderEmail', user.email || '');
@@ -159,7 +147,6 @@ export default function RegistrationPage() {
     }
   }, [user]);
 
-  // Handle task selection auto-preselect from query param
   useEffect(() => {
     if (defaultTaskId) {
       step1Form.setValue('taskId', defaultTaskId);
@@ -172,37 +159,27 @@ export default function RegistrationPage() {
 
   const totalFee = BASE_REGISTRATION_FEE + (wantsHomeDelivery ? HOME_DELIVERY_ADDON_FEE : 0);
 
-  // Step 1 Submit -> Step 2
   const onStep1Submit = (data: Step1Data) => {
-    // Check if task is full
     const count = taskCounts[data.taskId] || 0;
     if (count >= MAX_TEAMS_PER_TASK) {
       step1Form.setError('taskId', { message: 'This problem statement has reached its 8-team cap. Please select another task.' });
       return;
     }
-    // Save draft
     const draft = { step1: data, step2: step2Form.getValues() };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     setStep(2);
   };
 
-  // Step 2 Submit -> Step 3 (Review)
   const onStep2Submit = (data: Step2Data) => {
     const draft = { step1: step1Form.getValues(), step2: data };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     setStep(3);
   };
 
-  // Final submit: opens Razorpay checkout, then asks the server to verify
-  // the payment and create the registration (server-authoritative — this
-  // client function never sets paymentStatus itself).
-  // Keep a ref mirror of the active hold so the unmount cleanup below
-  // (which can't see fresh state) always knows the latest holdId.
   useEffect(() => {
     activeHoldRef.current = activeHold;
   }, [activeHold]);
 
-  // Live countdown display while a hold is active.
   useEffect(() => {
     if (!activeHold) {
       setHoldSecondsLeft(null);
@@ -231,16 +208,6 @@ export default function RegistrationPage() {
     }
   };
 
-  // Release an active hold immediately rather than making others wait out
-  // the full 2 minutes — covers two different situations that need two
-  // different mechanisms:
-  //  1. Navigating to another page within the app (e.g. clicking a Link) —
-  //     caught by this effect's own cleanup function, which React runs on
-  //     unmount.
-  //  2. An actual browser-level refresh, back/forward, or tab close — a
-  //     React effect's cleanup does NOT fire for these (the whole JS
-  //     context gets torn down before React gets a chance), so this also
-  //     needs a real `pagehide` listener on `window` itself.
   useEffect(() => {
     const releaseActiveHold = () => {
       if (activeHoldRef.current) {
@@ -258,11 +225,6 @@ export default function RegistrationPage() {
   }, []);
 
   const handleFinalSubmit = async () => {
-    // Guards this function's own user.uid references for TypeScript's
-    // narrowing (the component-level "require auth" check now runs later,
-    // right before the JSX return — see the comment there for why) and
-    // defensively covers the unlikely case of the session ending between
-    // mount and this button click.
     if (!user) return;
     setIsSubmitting(true);
     setPaymentError(null);
@@ -271,11 +233,6 @@ export default function RegistrationPage() {
       const step1 = step1Form.getValues();
       const step2 = step2Form.getValues();
 
-      // Reserve a 2-minute slot hold BEFORE opening checkout, so the task
-      // can't silently fill up while this user is mid-payment. This is a
-      // courtesy hold for UX only — api/payment/verify.ts still does its
-      // own authoritative, transactional capacity check regardless of
-      // what happens here.
       const reserveRes = await authFetch('/api/payment/reserve-slot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -305,8 +262,11 @@ export default function RegistrationPage() {
           leaderEmail: step1.leaderEmail,
           leaderPhone: step1.leaderPhone,
           collegeName: step1.collegeName,
+          leaderYear: step1.leaderYear,
           member1Name: step1.member1Name || undefined,
+          member1Year: step1.member1Year || undefined,
           member2Name: step1.member2Name || undefined,
+          member2Year: step1.member2Year || undefined,
           mentorName: step1.mentorName,
           mentorEmail: step1.mentorEmail || undefined,
           mentorPhone: step1.mentorPhone || undefined,
@@ -328,8 +288,11 @@ export default function RegistrationPage() {
             leaderEmail: step1.leaderEmail,
             leaderPhone: step1.leaderPhone,
             collegeName: step1.collegeName,
+            leaderYear: step1.leaderYear,
             member1Name: step1.member1Name || undefined,
+            member1Year: step1.member1Year || undefined,
             member2Name: step1.member2Name || undefined,
+            member2Year: step1.member2Year || undefined,
             mentorName: step1.mentorName,
             mentorEmail: step1.mentorEmail || undefined,
             mentorPhone: step1.mentorPhone || undefined,
@@ -346,18 +309,14 @@ export default function RegistrationPage() {
         throw new Error(body.error || 'Payment verification failed. Please contact the organizers.');
       }
 
-      // Clear local draft
       localStorage.removeItem(DRAFT_KEY);
 
       setActiveHold(null);
       setCompletedRegistration(body as Registration);
-      setStep(4); // Pass confirmation screen
+      setStep(4);
     } catch (err) {
       console.error('Registration/payment error:', err);
       const message = err instanceof Error ? err.message : 'Something went wrong during payment. Please try again.';
-      // A dismissed/cancelled Razorpay popup rejects with this exact message
-      // (see src/lib/razorpay.ts) — free the slot immediately in that case
-      // rather than making others wait out the full hold.
       setPaymentError(
         message.includes('Payment window closed')
           ? 'Payment was cancelled. Your slot reservation has been released — you can try again anytime.'
@@ -372,13 +331,6 @@ export default function RegistrationPage() {
     }
   };
 
-  // Derived registration-gate state (plain values, not hooks — safe to
-  // compute here since every hook above has already run regardless of
-  // branch). `nowTick` re-runs this every second via the interval above,
-  // so the moment the clock passes `opensAt`, `registrationClosed` flips
-  // to false and the real form appears automatically — no refresh needed.
-  // Priority: manuallyClosed always wins (safety default) > manuallyOpened
-  // (force-open, skips the schedule entirely) > the scheduled opensAt clock.
   const opensAtDate = regControl ? new Date(regControl.opensAt) : null;
   const manuallyClosed = regControl?.manuallyClosed ?? false;
   const manuallyOpened = regControl?.manuallyOpened ?? false;
@@ -392,12 +344,6 @@ export default function RegistrationPage() {
     secs: Math.floor((msUntilOpen % 60_000) / 1_000),
   };
 
-  // Gate 0: the registration-control read itself failed (e.g. Firestore
-  // rules for the `settings` collection aren't published yet, or a network
-  // blip) — checked first and separately from Gate 1 below. Previously this
-  // case fell through silently: regControl stayed undefined, opensAtDate
-  // became null, and the page rendered a broken "opens on ." with an
-  // all-zero countdown instead of telling anyone what actually went wrong.
   if (regControlError) {
     return (
       <PageTransition>
@@ -419,11 +365,6 @@ export default function RegistrationPage() {
     );
   }
 
-  // Gate 1: registration not open yet, or admin has manually closed it —
-  // shown to EVERYONE, signed in or not, before the auth-required check
-  // below, since a signed-out visitor following an early poster link should
-  // still see when registration opens rather than being asked to sign in
-  // first for something they can't do yet anyway.
   if (registrationClosed) {
     return (
       <PageTransition>
@@ -435,13 +376,6 @@ export default function RegistrationPage() {
             {regControlLoading ? (
               <p className="text-sm text-metal-500">Loading…</p>
             ) : manuallyClosed && msUntilOpen === 0 ? (
-              // The scheduled opensAt time has already passed, but the
-              // organizers are still manually holding registration closed
-              // (e.g. a payment gateway issue needs resolving first). In
-              // this state, quoting the original schedule ("scheduled to
-              // reopen on [a time already in the past]") reads as broken —
-              // so this shows a simple, honest "opening soon" message with
-              // no stale date and no all-zero countdown grid instead.
               <>
                 <h2 className="text-title text-navy-900 mb-2">Registration Is Currently Closed</h2>
                 <p className="text-sm text-metal-600 mb-6">
@@ -487,12 +421,6 @@ export default function RegistrationPage() {
     );
   }
 
-  // Require auth to start. Deliberately placed AFTER every hook above (not
-  // as an early return higher up) — an early return before some of this
-  // component's hooks would make React call a different number of hooks
-  // depending on whether `user` is set, which throws "Rendered fewer hooks
-  // than expected" (React error #300) the moment `user` flips to null, e.g.
-  // right after signing out while this page is still mounted.
   if (!user) {
     return (
       <PageTransition>
@@ -540,7 +468,6 @@ export default function RegistrationPage() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Step Indicator (Steps 1 to 3) */}
         {step <= 3 && (
           <div className="mb-8">
             <div className="flex items-center justify-between relative">
@@ -591,9 +518,7 @@ export default function RegistrationPage() {
           </div>
         )}
 
-        {/* Step Content */}
         <AnimatePresence mode="wait">
-          {/* STEP 1: TEAM & TASK */}
           {step === 1 && (
             <motion.form
               key="step1"
@@ -610,7 +535,6 @@ export default function RegistrationPage() {
                 </p>
               </div>
 
-              {/* Leader Info */}
               <div className="space-y-4">
                 <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Team Leader Details</h3>
 
@@ -685,9 +609,23 @@ export default function RegistrationPage() {
                     )}
                   </div>
                 </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label" htmlFor="leaderYear">Year of Study *</label>
+                    <input
+                      {...step1Form.register('leaderYear')}
+                      id="leaderYear"
+                      className={cn('form-input', step1Form.formState.errors.leaderYear && 'border-red-400')}
+                      placeholder="e.g. 3rd Year"
+                    />
+                    {step1Form.formState.errors.leaderYear && (
+                      <p className="form-error">{step1Form.formState.errors.leaderYear.message}</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
-              {/* Team Members */}
               <div className="space-y-4 pt-4 border-t border-metal-100">
                 <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Team Members (Optional)</h3>
 
@@ -706,6 +644,18 @@ export default function RegistrationPage() {
                   </div>
 
                   <div>
+                    <label className="form-label" htmlFor="member1Year">Member 1 Year of Study (Optional)</label>
+                    <input
+                      {...step1Form.register('member1Year')}
+                      id="member1Year"
+                      className="form-input"
+                      placeholder="e.g. 2nd Year"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
                     <label className="form-label" htmlFor="member2Name">Member 2 Name (Optional)</label>
                     <input
                       {...step1Form.register('member2Name')}
@@ -717,11 +667,20 @@ export default function RegistrationPage() {
                       <p className="form-error">{step1Form.formState.errors.member2Name.message}</p>
                     )}
                   </div>
+
+                  <div>
+                    <label className="form-label" htmlFor="member2Year">Member 2 Year of Study (Optional)</label>
+                    <input
+                      {...step1Form.register('member2Year')}
+                      id="member2Year"
+                      className="form-input"
+                      placeholder="e.g. 2nd Year"
+                    />
+                  </div>
                 </div>
                 <p className="text-xs text-metal-500">A team can be just the leader, or the leader plus up to 2 additional members (max team size: 3).</p>
               </div>
 
-              {/* Task Selection */}
               <div className="space-y-4 pt-4 border-t border-metal-100">
                 <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Selected Problem Statement *</h3>
 
@@ -732,7 +691,6 @@ export default function RegistrationPage() {
                 )}
 
                 {selectedTask && (taskCounts[selectedTask.id] || 0) < MAX_TEAMS_PER_TASK ? (
-                  // Locked summary — task was chosen on the Problem Statements page, no re-selection needed
                   <div className="p-4 rounded-xl border border-navy-900 bg-navy-50 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -816,7 +774,6 @@ export default function RegistrationPage() {
             </motion.form>
           )}
 
-          {/* STEP 2: FEE & ADD-ONS */}
           {step === 2 && (
             <motion.form
               key="step2"
@@ -833,7 +790,6 @@ export default function RegistrationPage() {
                 </p>
               </div>
 
-              {/* Fee breakdown */}
               <div className="bg-metal-50 p-5 rounded-2xl border border-metal-200">
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-metal-600">Base Registration Fee:</span>
@@ -858,7 +814,6 @@ export default function RegistrationPage() {
                 </p>
               </div>
 
-              {/* WCE Lab Usage Policy Notice */}
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-800">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p>
@@ -877,7 +832,6 @@ export default function RegistrationPage() {
             </motion.form>
           )}
 
-          {/* STEP 3: REVIEW & SUBMIT */}
           {step === 3 && (
             <motion.div
               key="step3"
@@ -894,7 +848,6 @@ export default function RegistrationPage() {
               </div>
 
               <div className="space-y-4 divide-y divide-metal-100 text-sm">
-                {/* Team Info Summary */}
                 <div className="space-y-2 pt-2">
                   <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Team Information</h3>
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -911,6 +864,10 @@ export default function RegistrationPage() {
                       <p className="font-semibold text-navy-900">{step1Form.getValues('leaderName')}</p>
                     </div>
                     <div>
+                      <span className="text-metal-500">Leader Year of Study:</span>
+                      <p className="font-semibold text-navy-900">{step1Form.getValues('leaderYear')}</p>
+                    </div>
+                    <div>
                       <span className="text-metal-500">Leader Email:</span>
                       <p className="font-semibold text-navy-900">{step1Form.getValues('leaderEmail')}</p>
                     </div>
@@ -921,19 +878,24 @@ export default function RegistrationPage() {
                     {step1Form.getValues('member1Name') && (
                       <div>
                         <span className="text-metal-500">Member 1:</span>
-                        <p className="font-semibold text-navy-900">{step1Form.getValues('member1Name')}</p>
+                        <p className="font-semibold text-navy-900">
+                          {step1Form.getValues('member1Name')}
+                          {step1Form.getValues('member1Year') ? ` (${step1Form.getValues('member1Year')})` : ''}
+                        </p>
                       </div>
                     )}
                     {step1Form.getValues('member2Name') && (
                       <div>
                         <span className="text-metal-500">Member 2:</span>
-                        <p className="font-semibold text-navy-900">{step1Form.getValues('member2Name')}</p>
+                        <p className="font-semibold text-navy-900">
+                          {step1Form.getValues('member2Name')}
+                          {step1Form.getValues('member2Year') ? ` (${step1Form.getValues('member2Year')})` : ''}
+                        </p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Task Selection Summary */}
                 <div className="space-y-2 pt-4">
                   <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Selected Task</h3>
                   <div className="p-3 bg-navy-50 rounded-xl border border-navy-100">
@@ -945,7 +907,6 @@ export default function RegistrationPage() {
                   </div>
                 </div>
 
-                {/* Payment Summary */}
                 <div className="space-y-2 pt-4">
                   <h3 className="text-xs font-bold text-metal-400 uppercase tracking-wider">Payment</h3>
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -1003,7 +964,6 @@ export default function RegistrationPage() {
             </motion.div>
           )}
 
-          {/* STEP 4: REGISTRATION PASS CONFIRMATION */}
           {step === 4 && completedRegistration && (
             <motion.div
               key="step4"
@@ -1021,7 +981,6 @@ export default function RegistrationPage() {
                 </p>
               </div>
 
-              {/* Digital Pass Card */}
               <div id="registration-pass" className="card border-2 border-navy-900 p-6 bg-gradient-to-br from-white to-navy-50 relative overflow-hidden shadow-elevated">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-gold-400/10 rounded-full blur-2xl pointer-events-none" />
 
@@ -1077,7 +1036,6 @@ export default function RegistrationPage() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 justify-center">
                 <button
                   onClick={() => window.print()}
