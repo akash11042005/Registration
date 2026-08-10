@@ -36,23 +36,11 @@ import {
 import { Registration } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-// Fixed option lists so "Year of Study" and "Branch" are always
-// clean, comparable values — a free-text box previously let a
-// student type "BTech" into the year field instead of an actual year.
-const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-const BRANCH_OPTIONS = [
-  'Metallurgy & Materials Engineering',
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Electrical Engineering',
-  'Electronics & Telecommunication',
-  'Computer Engineering',
-  'Information Technology',
-  'Chemical Engineering',
-  'Instrumentation Engineering',
-  'Production Engineering',
-  'Other',
-];
+// Fixed option list so "Year of Study" is always a clean, comparable
+// value — a free-text box previously let a student type "BTech" into
+// the year field instead of an actual year. Only 2nd and 3rd year are
+// offered since that's who's eligible for AAYODHYAM (see homepage).
+const YEAR_OPTIONS = ['2nd Year', '3rd Year'];
 
 // ─────────────────────────────────────────────────
 // Zod schemas per step
@@ -648,16 +636,12 @@ export default function RegistrationPage() {
 
                   <div>
                     <label className="form-label" htmlFor="leaderBranch">Branch *</label>
-                    <select
+                    <input
                       {...step1Form.register('leaderBranch')}
                       id="leaderBranch"
                       className={cn('form-input', step1Form.formState.errors.leaderBranch && 'border-red-400')}
-                    >
-                      <option value="">Select branch</option>
-                      {BRANCH_OPTIONS.map((b) => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                      placeholder="e.g. Mechanical Engineering"
+                    />
                     {step1Form.formState.errors.leaderBranch && (
                       <p className="form-error">{step1Form.formState.errors.leaderBranch.message}</p>
                     )}
@@ -696,12 +680,12 @@ export default function RegistrationPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="form-label" htmlFor="member1Branch">Member 1 Branch (Optional)</label>
-                    <select {...step1Form.register('member1Branch')} id="member1Branch" className="form-input">
-                      <option value="">Select branch</option>
-                      {BRANCH_OPTIONS.map((b) => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                    <input
+                      {...step1Form.register('member1Branch')}
+                      id="member1Branch"
+                      className="form-input"
+                      placeholder="e.g. Mechanical Engineering"
+                    />
                   </div>
                   <div />
                 </div>
@@ -734,12 +718,12 @@ export default function RegistrationPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div>
                     <label className="form-label" htmlFor="member2Branch">Member 2 Branch (Optional)</label>
-                    <select {...step1Form.register('member2Branch')} id="member2Branch" className="form-input">
-                      <option value="">Select branch</option>
-                      {BRANCH_OPTIONS.map((b) => (
-                        <option key={b} value={b}>{b}</option>
-                      ))}
-                    </select>
+                    <input
+                      {...step1Form.register('member2Branch')}
+                      id="member2Branch"
+                      className="form-input"
+                      placeholder="e.g. Mechanical Engineering"
+                    />
                   </div>
                   <div />
                 </div>

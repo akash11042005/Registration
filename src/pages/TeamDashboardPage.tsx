@@ -38,20 +38,7 @@ import { REGISTRATION_EDIT_DEADLINE } from '@/lib/constants';
 import { Submission } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-const BRANCH_OPTIONS = [
-  'Metallurgy & Materials Engineering',
-  'Mechanical Engineering',
-  'Civil Engineering',
-  'Electrical Engineering',
-  'Electronics & Telecommunication',
-  'Computer Engineering',
-  'Information Technology',
-  'Chemical Engineering',
-  'Instrumentation Engineering',
-  'Production Engineering',
-  'Other',
-];
+const YEAR_OPTIONS = ['2nd Year', '3rd Year'];
 
 const submissionSchema = z.object({
   title: z.string().min(3, 'Submission title is required'),
@@ -754,12 +741,7 @@ function EditTeamDetailsModal({
               </div>
               <div>
                 <label className="form-label" htmlFor="edit-leaderBranch">Branch</label>
-                <select {...register('leaderBranch')} id="edit-leaderBranch" className="form-input">
-                  <option value="">Select branch</option>
-                  {BRANCH_OPTIONS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                <input {...register('leaderBranch')} id="edit-leaderBranch" className="form-input" placeholder="e.g. Mechanical Engineering" />
                 {errors.leaderBranch && <p className="form-error">{errors.leaderBranch.message}</p>}
               </div>
             </div>
@@ -789,12 +771,7 @@ function EditTeamDetailsModal({
               </div>
               <div>
                 <label className="form-label" htmlFor="edit-member1Branch">Member 1 Branch (Optional)</label>
-                <select {...register('member1Branch')} id="edit-member1Branch" className="form-input">
-                  <option value="">Select branch</option>
-                  {BRANCH_OPTIONS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                <input {...register('member1Branch')} id="edit-member1Branch" className="form-input" placeholder="e.g. Mechanical Engineering" />
               </div>
             </div>
 
@@ -810,12 +787,7 @@ function EditTeamDetailsModal({
               </div>
               <div>
                 <label className="form-label" htmlFor="edit-member2Branch">Member 2 Branch (Optional)</label>
-                <select {...register('member2Branch')} id="edit-member2Branch" className="form-input">
-                  <option value="">Select branch</option>
-                  {BRANCH_OPTIONS.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                <input {...register('member2Branch')} id="edit-member2Branch" className="form-input" placeholder="e.g. Mechanical Engineering" />
               </div>
             </div>
 
