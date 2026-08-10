@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import HeroCrystalLattice from '@/components/HeroCrystalLattice';
@@ -189,8 +189,98 @@ function MaterialsIllustration() {
 }
 
 // ─────────────────────────────────────────────────
-// Home page
+// Overview video player — deliberately avoids the browser's native
+// Fullscreen API. On this animation-heavy homepage (framer-motion
+// sections, SVG lattice backgrounds, live countdown), exiting real
+// fullscreen forces the whole page to repaint/reflow at once, which
+// freezes on some systems badly enough that the tab has to be closed.
+// Instead, "expand" just repositions this same <video> element to
+// cover the viewport via CSS (fixed positioning + high z-index) —
+// document.fullscreenElement is never touched, so that page-wide
+// repaint never gets triggered on exit. Playback is uninterrupted
+// since it's the same DOM node the whole time, just restyled.
 // ─────────────────────────────────────────────────
+function OverviewVideoPlayer() {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!isExpanded) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsExpanded(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [isExpanded]);
+
+  return (
+    <>
+      {isExpanded && (
+        <div
+          className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsExpanded(false);
+          }}
+        >
+          <button
+            onClick={() => setIsExpanded(false)}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl font-bold transition-colors"
+            aria-label="Close video"
+          >
+            ✕
+          </button>
+          <video
+            className="max-w-full max-h-full object-contain"
+            controls
+            controlsList="nofullscreen"
+            disablePictureInPicture
+            playsInline
+            autoPlay
+            preload="metadata"
+          >
+            <source src="/videos/Overview.mp4" type="video/mp4" />
+            Your browser doesn't support embedded video.{' '}
+            <a href="/videos/Overview.mp4" className="underline">Download the video</a> instead.
+          </video>
+        </div>
+      )}
+
+      {!isExpanded && (
+        <div className="relative w-full max-w-[300px] sm:max-w-[320px]">
+          <div
+            className="relative rounded-[2rem] border-4 border-white/10 bg-black overflow-hidden shadow-elevated"
+            style={{ aspectRatio: '9 / 16' }}
+          >
+            <video
+              className="w-full h-full object-cover"
+              controls
+              controlsList="nofullscreen"
+              disablePictureInPicture
+              playsInline
+              preload="metadata"
+            >
+              <source src="/videos/Overview.mp4" type="video/mp4" />
+              Your browser doesn't support embedded video.{' '}
+              <a href="/videos/Overview.mp4" className="underline">Download the video</a> instead.
+            </video>
+            <button
+              onClick={() => setIsExpanded(true)}
+              className="absolute top-3 right-3 z-10 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white text-xs font-semibold backdrop-blur-sm transition-colors"
+            >
+              Expand
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+
 export default function HomePage() {
   // Public homepage stats must be derived from `taskCounts` (Firestore rule:
   // read: if true) rather than the raw `registrations` collection, which
