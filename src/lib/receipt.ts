@@ -60,17 +60,23 @@ export function downloadRegistrationReceipt(reg: Registration) {
     row('Leader Name', reg.leaderName);
     row('Leader Email', reg.leaderEmail);
     row('Leader Contact', reg.leaderPhone);
+    row('Leader Year of Study', reg.leaderYear);
+    row('Leader Branch', reg.leaderBranch);
     line(6);
 
     heading('Team Members');
-    if (reg.member1Name) row('Member 1', reg.member1Name);
-    if (reg.member2Name) row('Member 2', reg.member2Name);
-    line(6);
-
-    heading('Mentor');
-    row('Mentor Name', reg.mentorName || '');
-    if (reg.mentorEmail) row('Mentor Email', reg.mentorEmail);
-    if (reg.mentorPhone) row('Mentor Contact', reg.mentorPhone);
+    if (reg.member1Name) {
+        row('Member 1', reg.member1Name);
+        if (reg.member1Year || reg.member1Branch) {
+            row('Member 1 Year / Branch', [reg.member1Year, reg.member1Branch].filter(Boolean).join(' · '));
+        }
+    }
+    if (reg.member2Name) {
+        row('Member 2', reg.member2Name);
+        if (reg.member2Year || reg.member2Branch) {
+            row('Member 2 Year / Branch', [reg.member2Year, reg.member2Branch].filter(Boolean).join(' · '));
+        }
+    }
     line(6);
 
     heading('Problem Statement');

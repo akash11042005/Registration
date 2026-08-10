@@ -314,11 +314,14 @@ export type EditableRegistrationFields = Partial<
     | 'teamName'
     | 'leaderPhone'
     | 'collegeName'
+    | 'leaderYear'
+    | 'leaderBranch'
     | 'member1Name'
+    | 'member1Year'
+    | 'member1Branch'
     | 'member2Name'
-    | 'mentorName'
-    | 'mentorEmail'
-    | 'mentorPhone'
+    | 'member2Year'
+    | 'member2Branch'
   >
 >;
 

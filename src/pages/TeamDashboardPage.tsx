@@ -38,6 +38,21 @@ import { REGISTRATION_EDIT_DEADLINE } from '@/lib/constants';
 import { Submission } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+const YEAR_OPTIONS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+const BRANCH_OPTIONS = [
+  'Metallurgy & Materials Engineering',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Electrical Engineering',
+  'Electronics & Telecommunication',
+  'Computer Engineering',
+  'Information Technology',
+  'Chemical Engineering',
+  'Instrumentation Engineering',
+  'Production Engineering',
+  'Other',
+];
+
 const submissionSchema = z.object({
   title: z.string().min(3, 'Submission title is required'),
   description: z.string().min(10, 'Technical methodology summary must be at least 10 characters'),
@@ -50,11 +65,14 @@ const editDetailsSchema = z.object({
   teamName: z.string().min(3, 'Team name must be at least 3 characters'),
   leaderPhone: z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit mobile number'),
   collegeName: z.string().min(2, 'College name is required'),
+  leaderYear: z.string().min(1, 'Year of study is required'),
+  leaderBranch: z.string().min(1, 'Branch is required'),
   member1Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
+  member1Year: z.string().optional(),
+  member1Branch: z.string().optional(),
   member2Name: z.union([z.string().min(2, 'Enter a valid name'), z.literal('')]).optional(),
-  mentorName: z.string().min(2, 'Mentor name is required'),
-  mentorEmail: z.union([z.string().email('Enter a valid email'), z.literal('')]).optional(),
-  mentorPhone: z.union([z.string().regex(/^[0-9]{10}$/, 'Must be a valid 10-digit number'), z.literal('')]).optional(),
+  member2Year: z.string().optional(),
+  member2Branch: z.string().optional(),
 });
 
 type EditDetailsFormData = z.infer<typeof editDetailsSchema>;
@@ -393,23 +411,25 @@ export default function TeamDashboardPage() {
                       <span className="text-metal-500 block">Leader Email</span>
                       <span className="font-semibold text-navy-900">{registration.leaderEmail}</span>
                     </div>
-                    <div>
-                      <span className="text-metal-500 block">Members</span>
-                      <span className="font-semibold text-navy-900">
-                        {[registration.member1Name, registration.member2Name]
-                          .filter(Boolean)
-                          .join(', ') || 'Leader only'}
-                      </span>
-                    </div>
                     <div className="flex items-center gap-1.5">
                       <GraduationCap className="w-3.5 h-3.5 text-metal-400 shrink-0 mt-3" />
                       <div>
-                        <span className="text-metal-500 block">Mentor</span>
+                        <span className="text-metal-500 block">Leader Year &amp; Branch</span>
                         <span className="font-semibold text-navy-900">
-                          {registration.mentorName}
-                          {registration.mentorEmail ? ` · ${registration.mentorEmail}` : ''}
+                          {[registration.leaderYear, registration.leaderBranch].filter(Boolean).join(' · ') || '—'}
                         </span>
                       </div>
+                    </div>
+                    <div>
+                      <span className="text-metal-500 block">Members</span>
+                      <span className="font-semibold text-navy-900">
+                        {[
+                          registration.member1Name && `${registration.member1Name}${[registration.member1Year, registration.member1Branch].filter(Boolean).length ? ` (${[registration.member1Year, registration.member1Branch].filter(Boolean).join(' · ')})` : ''}`,
+                          registration.member2Name && `${registration.member2Name}${[registration.member2Year, registration.member2Branch].filter(Boolean).length ? ` (${[registration.member2Year, registration.member2Branch].filter(Boolean).join(' · ')})` : ''}`,
+                        ]
+                          .filter(Boolean)
+                          .join(', ') || 'Leader only'}
+                      </span>
                     </div>
                     <div>
                       <span className="text-metal-500 block">Amount Paid</span>
@@ -665,11 +685,14 @@ function EditTeamDetailsModal({
       teamName: registration.teamName,
       leaderPhone: registration.leaderPhone,
       collegeName: registration.collegeName,
+      leaderYear: registration.leaderYear || '',
+      leaderBranch: registration.leaderBranch || '',
       member1Name: registration.member1Name || '',
+      member1Year: registration.member1Year || '',
+      member1Branch: registration.member1Branch || '',
       member2Name: registration.member2Name || '',
-      mentorName: registration.mentorName,
-      mentorEmail: registration.mentorEmail || '',
-      mentorPhone: registration.mentorPhone || '',
+      member2Year: registration.member2Year || '',
+      member2Branch: registration.member2Branch || '',
     },
   });
 
@@ -720,6 +743,29 @@ function EditTeamDetailsModal({
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
+                <label className="form-label" htmlFor="edit-leaderYear">Year of Study</label>
+                <select {...register('leaderYear')} id="edit-leaderYear" className="form-input">
+                  <option value="">Select year</option>
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+                {errors.leaderYear && <p className="form-error">{errors.leaderYear.message}</p>}
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-leaderBranch">Branch</label>
+                <select {...register('leaderBranch')} id="edit-leaderBranch" className="form-input">
+                  <option value="">Select branch</option>
+                  {BRANCH_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                {errors.leaderBranch && <p className="form-error">{errors.leaderBranch.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
                 <label className="form-label" htmlFor="edit-member1">Member 1 Name (Optional)</label>
                 <input {...register('member1Name')} id="edit-member1" className="form-input" />
                 {errors.member1Name && <p className="form-error">{errors.member1Name.message}</p>}
@@ -731,22 +777,45 @@ function EditTeamDetailsModal({
               </div>
             </div>
 
-            <div>
-              <label className="form-label" htmlFor="edit-mentorName">Mentor Name</label>
-              <input {...register('mentorName')} id="edit-mentorName" className="form-input" />
-              {errors.mentorName && <p className="form-error">{errors.mentorName.message}</p>}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="form-label" htmlFor="edit-member1Year">Member 1 Year (Optional)</label>
+                <select {...register('member1Year')} id="edit-member1Year" className="form-input">
+                  <option value="">Select year</option>
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label" htmlFor="edit-member1Branch">Member 1 Branch (Optional)</label>
+                <select {...register('member1Branch')} id="edit-member1Branch" className="form-input">
+                  <option value="">Select branch</option>
+                  {BRANCH_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="form-label" htmlFor="edit-mentorEmail">Mentor Email (Optional)</label>
-                <input {...register('mentorEmail')} id="edit-mentorEmail" className="form-input" />
-                {errors.mentorEmail && <p className="form-error">{errors.mentorEmail.message}</p>}
+                <label className="form-label" htmlFor="edit-member2Year">Member 2 Year (Optional)</label>
+                <select {...register('member2Year')} id="edit-member2Year" className="form-input">
+                  <option value="">Select year</option>
+                  {YEAR_OPTIONS.map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="form-label" htmlFor="edit-mentorPhone">Mentor Contact (Optional)</label>
-                <input {...register('mentorPhone')} id="edit-mentorPhone" className="form-input" />
-                {errors.mentorPhone && <p className="form-error">{errors.mentorPhone.message}</p>}
+                <label className="form-label" htmlFor="edit-member2Branch">Member 2 Branch (Optional)</label>
+                <select {...register('member2Branch')} id="edit-member2Branch" className="form-input">
+                  <option value="">Select branch</option>
+                  {BRANCH_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
