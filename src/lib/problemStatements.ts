@@ -98,7 +98,7 @@ export const PROBLEM_STATEMENTS: ProblemStatement[] = [
   },
   {
     id: 5,
-    title: 'Cast Iron Nodularity',
+    title: 'App-Based Cast Iron Nodularity',
     category: 'Metallography',
     difficulty: 'Medium',
     mode: 'Online/Offline',
