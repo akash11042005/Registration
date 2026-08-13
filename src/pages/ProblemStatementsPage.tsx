@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, X, ChevronRight, FlaskConical, Users, AlertCircle, Info, ArrowRight } from 'lucide-react';
+import { Search, Filter, X, ChevronRight, FlaskConical, Users, AlertCircle, Info, ArrowRight, Phone } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 import { PROBLEM_STATEMENTS, ProblemStatement } from '@/lib/problemStatements';
 import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
@@ -362,6 +362,43 @@ export default function ProblemStatementsPage() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── Need Help? Contact box ──
+            Sits below every problem statement, full-width, styled to read
+            as a clear closing section rather than getting lost after a
+            long scroll of cards. Phone numbers are real tel: links so
+            tapping one on mobile opens the dialer directly. */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.4 }}
+          className="mt-12 rounded-2xl border border-navy-100 bg-gradient-to-br from-navy-50 to-gold-50/30 p-6 sm:p-8 text-center"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-navy-900 flex items-center justify-center mx-auto mb-4">
+            <Phone className="w-5 h-5 text-gold-400" />
+          </div>
+          <h3 className="font-bold text-navy-900 text-lg mb-2">Have Questions About a Problem Statement?</h3>
+          <p className="text-sm text-metal-600 max-w-xl mx-auto mb-5">
+            If you have queries or doubts about any specific problem statement — or the one you've chosen — reach out directly and we'll help you out.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="tel:+919309503572"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-navy-200 text-navy-900 font-semibold text-sm hover:border-navy-400 hover:shadow-card transition-all"
+            >
+              <Phone className="w-4 h-4 text-gold-600" />
+              +91 93095 03572
+            </a>
+            <a
+              href="tel:+917700061518"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-navy-200 text-navy-900 font-semibold text-sm hover:border-navy-400 hover:shadow-card transition-all"
+            >
+              <Phone className="w-4 h-4 text-gold-600" />
+              +91 77000 61518
+            </a>
+          </div>
+        </motion.div>
       </div>
 
       {/* Detail modal */}
