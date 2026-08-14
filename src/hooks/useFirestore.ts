@@ -11,6 +11,7 @@ import {
   updateDoc,
   deleteDoc,
   setDoc,
+  addDoc,
   increment,
   runTransaction,
 } from 'firebase/firestore';
@@ -64,9 +65,6 @@ export function useRegistrationControl() {
       return { ...DEFAULT_REGISTRATION_CONTROL, ...(snap.data() as Partial<RegistrationControl>) };
     },
     staleTime: 10_000,
-    // Poll fairly often (not just on-mount) so a tab that's been open since
-    // before the admin flips `manuallyClosed` — or since before `opensAt`
-    // passes — picks up the change without the user needing to refresh.
     refetchInterval: 15_000,
   });
 }
@@ -86,22 +84,24 @@ export function useUpdateRegistrationControl() {
 }
 
 // ─────────────────────────────────────────────────
-// Announcements
+// Announcements — reads/writes Firestore directly, same reliable
+// pattern as everything else in this file. Previously this went
+// through fetch('/api/announcements'), but no such endpoint is
+// ever deployed to Vercel (only a local-dev-only Express server
+// under /server has that route, which never ships to production).
+// That meant the call 404'd for every real visitor and silently
+// fell back to whatever was cached in THEIR OWN browser's local
+// storage — so a new announcement only ever appeared on the exact
+// device it was created from, never synced to anyone else. The
+// `announcements` Firestore collection (public read, admin write)
+// was already set up in firestore.rules — this just actually uses it.
 // ─────────────────────────────────────────────────
 export function useAnnouncements() {
   return useQuery({
     queryKey: ['announcements'],
     queryFn: async () => {
-      try {
-        const res = await fetch('/api/announcements');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) return data as Announcement[];
-        }
-      } catch (e) {
-        console.warn('Backend server announcements fallback:', e);
-      }
-      return localDb.getAnnouncements();
+      const snap = await getDocs(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')));
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Announcement);
     },
     staleTime: 5_000,
   });
@@ -109,13 +109,6 @@ export function useAnnouncements() {
 
 // ─────────────────────────────────────────────────
 // Registrations
-//
-// IMPORTANT: this now reads/writes real Firestore, not the local
-// Express server or localStorage. Registration DOCUMENTS are only
-// ever created server-side, by api/payment/verify.ts, after a
-// verified Razorpay payment — Firestore rules deny client-side
-// `create` on this collection entirely (see firestore.rules).
-// Admins may still update paymentStatus directly from the dashboard.
 // ─────────────────────────────────────────────────
 
 // Admin-only: all registrations, most recent first
@@ -148,14 +141,6 @@ export function useRegistrationByUid(uid: string | undefined) {
   });
 }
 
-// Live slot counts per problem statement — reads the public `taskCounts`
-// aggregate collection (safe for anyone to read, including signed-out
-// visitors browsing Problem Statements) rather than the full registrations
-// collection, which regular users can no longer read per the new rules.
-// Each doc has two fields: `count` (confirmed registrations) and `held`
-// (active 2-minute checkout reservations — see api/payment/reserve-slot.ts).
-// The number shown to users is the SUM of both, so a nearly-full task
-// doesn't look falsely available just because someone else is mid-payment.
 export function useTaskRegistrationCounts() {
   const { data } = useQuery({
     queryKey: ['taskCounts'],
@@ -174,7 +159,6 @@ export function useTaskRegistrationCounts() {
   return data || {};
 }
 
-// Live registration stats (total, verified, pending, rejected) — admin only
 export function useRegistrationStats() {
   const { data: regs = [] } = useRegistrations();
 
@@ -189,10 +173,6 @@ export function useRegistrationStats() {
   return { total, verified, pending, rejected };
 }
 
-// Admin-only: per-task breakdown of confirmed vs currently-held (2-minute
-// checkout reservation) slots — same source data as useTaskRegistrationCounts,
-// but returned separately so the admin dashboard can show "3 confirmed + 1
-// reserved" instead of a single combined number.
 export function useTaskCountsDetailed() {
   return useQuery({
     queryKey: ['taskCountsDetailed'],
@@ -210,15 +190,10 @@ export function useTaskCountsDetailed() {
   });
 }
 
-// Admin-only: payments that did NOT succeed (declined, or the user closed
-// the checkout popup) — see api/payment/log-attempt.ts. Purely informational,
-// helps answer "why didn't this person finish registering."
 export function useFailedPaymentAttempts() {
   return useQuery({
     queryKey: ['failedPaymentAttempts'],
     queryFn: async () => {
-      // Sorted client-side rather than via orderBy() to avoid requiring a
-      // Firestore composite index just for this admin-only, low-volume view.
       const snap = await getDocs(query(collection(db, 'payments'), where('status', 'in', ['failed', 'cancelled'])));
       return snap.docs
         .map((d) => ({ id: d.id, ...d.data() }) as { id: string; createdAt?: string })
@@ -246,9 +221,6 @@ export function useUpdateRegistrationStatus() {
 
         tx.update(regRef, { paymentStatus: status });
 
-        // Rejecting a previously-held slot frees it up; reversing a rejection
-        // occupies it again. Verified <-> pending transitions don't change
-        // slot occupancy — only "rejected" ever releases a slot.
         if (prevStatus !== 'rejected' && status === 'rejected') {
           tx.set(doc(db, 'taskCounts', String(current.taskId)), { count: increment(-1) }, { merge: true });
         } else if (prevStatus === 'rejected' && status !== 'rejected') {
@@ -271,27 +243,16 @@ export function useDeleteRegistration() {
       const regRef = doc(db, 'registrations', id);
 
       await runTransaction(db, async (tx) => {
-        // Firestore transactions require ALL reads to happen before ANY
-        // writes — reading taskCountRef after tx.delete(regRef) (as this
-        // used to do) throws every time, which is exactly why every single
-        // delete was failing (bulk clear and the per-row trash icon alike),
-        // not just occasionally. Both tx.get() calls now happen first.
         const snap = await tx.get(regRef);
-        if (!snap.exists()) return; // already gone — nothing to reconcile
+        if (!snap.exists()) return;
 
         const current = snap.data() as Registration;
         const needsCountDecrement = current.paymentStatus !== 'rejected';
         const taskCountRef = doc(db, 'taskCounts', String(current.taskId));
         const countSnap = needsCountDecrement ? await tx.get(taskCountRef) : null;
 
-        // Writes only after every read above has completed.
         tx.delete(regRef);
 
-        // Mirrors useUpdateRegistrationStatus's rule: a "rejected" registration
-        // already had its slot released back into the pool, so deleting it must
-        // NOT decrement count again — doing so double-frees the slot and can
-        // drive count negative (which is exactly what produced the "-2 / 8
-        // groups registered — 10 slots remaining" display bug).
         if (needsCountDecrement && countSnap) {
           const currentCount = countSnap.exists() ? (countSnap.data() as { count?: number }).count || 0 : 0;
           tx.set(taskCountRef, { count: Math.max(0, currentCount - 1) }, { merge: true });
@@ -339,11 +300,7 @@ export function useUpdateRegistrationDetails() {
 }
 
 // ─────────────────────────────────────────────────
-// Payment issues — payments that were verified by Razorpay but
-// couldn't be turned into a registration because the task filled
-// up in between (see api/payment/verify.ts). Admin-only; needs
-// manual resolution (refund via Razorpay dashboard, or reassign
-// the team to a different task and register them by hand).
+// Payment issues
 // ─────────────────────────────────────────────────
 export function usePaymentIssues() {
   return useQuery({
@@ -450,23 +407,15 @@ export function useUpdateSubmissionStatus() {
 }
 
 // ─────────────────────────────────────────────────
-// Announcement mutations (admin)
+// Announcement mutations — write directly to Firestore
+// (admin-only, enforced by firestore.rules: announcements/{id}
+// write requires isAdmin()).
 // ─────────────────────────────────────────────────
 export function useCreateAnnouncement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: Omit<Announcement, 'id'>) => {
-      localDb.saveAnnouncement(data);
-
-      try {
-        await fetch('/api/announcements', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
-          body: JSON.stringify(data),
-        });
-      } catch (e) {
-        console.warn('Backend announcement create error:', e);
-      }
+      await addDoc(collection(db, 'announcements'), data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['announcements'] });
@@ -478,16 +427,7 @@ export function useDeleteAnnouncement() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      localDb.deleteAnnouncement(id);
-
-      try {
-        await fetch(`/api/announcements/${id}`, {
-          method: 'DELETE',
-          headers: getAuthHeader(),
-        });
-      } catch (e) {
-        console.warn('Backend announcement delete error:', e);
-      }
+      await deleteDoc(doc(db, 'announcements', id));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['announcements'] });
