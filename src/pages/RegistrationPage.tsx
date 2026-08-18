@@ -383,9 +383,9 @@ export default function RegistrationPage() {
               <p className="text-sm text-metal-500">Loading…</p>
             ) : manuallyClosed && msUntilOpen === 0 ? (
               <>
-                <h2 className="text-title text-navy-900 mb-2">Registration Is Currently Closed</h2>
+                <h2 className="text-title text-navy-900 mb-2">Registration Is Now Closed</h2>
                 <p className="text-sm text-metal-600 mb-6">
-                  Team registration for AAYODHYAM 2026 is temporarily closed. It will open again shortly — this page unlocks automatically, no need to refresh. Please check back soon, or watch our announcements for updates.
+                  Team registration for AAYODHYAM 2026 has closed. Thank you to everyone who registered — we look forward to seeing your work at the event. If you already registered, head to your Team Dashboard for updates. For any queries, reach out via the Contact page.
                 </p>
               </>
             ) : (
