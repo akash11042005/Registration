@@ -380,7 +380,7 @@ export default function ProblemStatementsPage() {
           </div>
           <h3 className="font-bold text-navy-900 text-lg mb-2">Have Questions About a Problem Statement?</h3>
           <p className="text-sm text-metal-600 max-w-xl mx-auto mb-5">
-            If you have queries or doubts about any specific problem statement — or the one you've chosen — reach out directly and we'll help you out.
+            If you have queries or doubts about any specific problem statement — or the one you've chosen — reach out to us directly between 6PM to 7PM and we'll help you out.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <a
