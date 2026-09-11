@@ -3,8 +3,8 @@
 // ============================================================
 
 // Event start date/time — edit this single constant to update all countdown timers
-export const EVENT_START_DATE = new Date('2026-09-18T08:00:00+05:30'); // Friday 08:00 AM IST
-export const EVENT_END_DATE = new Date('2026-09-18T17:00:00+05:30'); // Friday 5:00 PM IST
+export const EVENT_START_DATE = new Date('2026-09-24T08:00:00+05:30'); // Thursday 08:00 AM IST
+export const EVENT_END_DATE = new Date('2026-09-24T17:00:00+05:30'); // Thursday 5:00 PM IST
 
 // Teams can edit their own registration details (members, mentor, college, etc.)
 // up until this moment — after that, edits must go through an organizer.
@@ -72,7 +72,7 @@ export const DEFAULT_ANNOUNCEMENTS = [
   {
     id: 'default-3',
     title: '📅 Evaluation Schedule Released',
-    content: 'Jury evaluations are scheduled for Friday, September 18. Full schedule available on the Timeline page.',
+    content: 'Jury evaluations are scheduled for 24–25 September. Full schedule available on the Timeline page.',
     category: 'Schedule' as const,
     important: false,
     createdAt: new Date().toISOString(),

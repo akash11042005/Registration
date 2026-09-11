@@ -347,7 +347,7 @@ export default function HomePage() {
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    18 &amp; 19 Sep, 2026
+                    24 &amp; 25 Sep, 2026
                   </span>
                   <span className="flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -375,7 +375,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div>
                 <p className="text-caption text-gold-400 mb-1">Event Begins In</p>
-                <p className="text-sm text-metal-400">Friday, September 18, 2026 · 08:00 AM IST</p>
+                <p className="text-sm text-metal-400">Thursday, September 24, 2026 · 08:00 AM IST</p>
               </div>
               <CountdownTimer />
             </div>
@@ -523,7 +523,7 @@ export default function HomePage() {
             <span className="section-label text-gold-400">Event Schedule</span>
             <h2 className="text-headline text-white mb-4">From Publicity to Prize Distribution</h2>
             <p className="text-body-lg text-metal-400 max-w-xl mx-auto">
-              Seven phases from early August through the prize distribution ceremony on 19 September 2026.
+              Seven phases from early August through the prize distribution ceremony on 25 September 2026.
             </p>
           </motion.div>
 

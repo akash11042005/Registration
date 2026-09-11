@@ -19,7 +19,7 @@ export default function TimelinePage() {
           <span className="section-label text-gold-400">Event Schedule</span>
           <h1 className="text-headline text-white mb-3">Full Timeline</h1>
           <p className="text-metal-300 text-body-lg max-w-2xl">
-            AAYODHYAM 2026 runs from publicity in early August through the prize distribution ceremony on 19 September 2026.
+            AAYODHYAM 2026 runs from publicity in early August through the prize distribution ceremony on 25 September 2026.
           </p>
         </div>
       </div>

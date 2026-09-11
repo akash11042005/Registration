@@ -40,14 +40,14 @@ export const EVENT_PHASES: EventPhase[] = [
     {
         number: 4,
         title: 'Evaluation',
-        dateRange: '18–19 Sep 2026',
-        description: 'Evaluation will be held on 18th and 19th September. For selected problem statements, an online evaluation on 17th September can be opted for.',
+        dateRange: '24–25 Sep 2026',
+        description: 'Evaluation will be held on 24th and 25th September. For selected problem statements, an online evaluation on 23rd September can be opted for.',
         icon: Award,
     },
     {
         number: 5,
         title: 'Prize Distribution Ceremony',
-        dateRange: '19 Sep 2026',
+        dateRange: '25 Sep 2026',
         description: 'Winners announced and prizes awarded.',
         icon: Trophy,
         highlight: true,
