@@ -20,7 +20,7 @@ const GALLERY_YEAR = '2026';
 const PER_PAGE = 8;
 
 const CAPTIONS: Record<string, string> = {
-    '2026-01-inauguration-guest-speaker.jpeg': 'Guest speaker addressing participants at the AAYODHYAM 2026 inauguration',
+    '2026-01-inauguration-guest-speaker.jpeg': 'College Professor addressing participants at the AAYODHYAM 2026 inauguration',
     '2026-02-inauguration-felicitation-bouquet.jpeg': 'Felicitation of the guest with a bouquet at the inauguration',
     '2026-03-inauguration-felicitation-volunteer.jpeg': 'Volunteers assisting with the felicitation as guests look on',
     '2026-04-inauguration-audience-auditorium.jpeg': 'Participants, faculty and guests gathered in the auditorium for the inauguration',
@@ -167,8 +167,8 @@ export default function GalleryPage() {
                                 onClick={() => goToPage(n)}
                                 aria-current={n === page ? 'page' : undefined}
                                 className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${n === page
-                                        ? 'bg-navy-950 text-gold-300'
-                                        : 'border border-metal-200 hover:bg-metal-100'
+                                    ? 'bg-navy-950 text-gold-300'
+                                    : 'border border-metal-200 hover:bg-metal-100'
                                     }`}
                             >
                                 {n}
