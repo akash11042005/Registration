@@ -20,6 +20,17 @@ const GALLERY_YEAR = '2026';
 const PER_PAGE = 8;
 
 const CAPTIONS: Record<string, string> = {
+    '2026-01-inauguration-guest-speaker.jpeg': 'Guest speaker addressing participants at the AAYODHYAM 2026 inauguration',
+    '2026-02-inauguration-felicitation-bouquet.jpeg': 'Felicitation of the guest with a bouquet at the inauguration',
+    '2026-03-inauguration-felicitation-volunteer.jpeg': 'Volunteers assisting with the felicitation as guests look on',
+    '2026-04-inauguration-audience-auditorium.jpeg': 'Participants, faculty and guests gathered in the auditorium for the inauguration',
+    '2026-05-participants-group-photo-mechanical-dept.jpeg': 'Organizing team and volunteers outside the Department of Mechanical Engineering, WCE Sangli',
+    '2026-06-team-presentation-lab-jury.jpeg': 'A team presenting its Innovation, Feasibility & Future Scope to the jury in the lab',
+    '2026-07-registration-desk-lab.jpeg': 'Volunteers coordinating at the desk while teams prepare in the lab',
+    '2026-08-team-presentation-classroom.jpeg': 'Team presenting its process sequence and parameters to the jury',
+    '2026-09-participants-attentive-audience.jpeg': 'Participants following a team presentation attentively',
+    '2026-10-team-presentation-microscopic-examination.jpeg': 'Team presenting microscopic examination and depth measurement results',
+    '2026-11-jury-members-evaluating.jpeg': 'Jury members reviewing and scoring team submissions',
     'inauguration-lamp-lighting.jpeg': 'Inauguration lamp-lighting ceremony, Department of Mechanical Engineering, Walchand College of Engineering, Sangli',
     'inauguration-felicitation.jpeg': 'Felicitation of guests at the inauguration ceremony',
     'inauguration-group-certificates.jpeg': 'Winning teams and organizers with certificates, AAYODHYAM 2025',
