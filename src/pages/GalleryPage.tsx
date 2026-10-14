@@ -2,13 +2,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ChevronLeft, ChevronRight, Images } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
-import inaugGroupImg from '@/assets/gallery/inauguration-group-certificates.jpeg';
-import inaugLampImg from '@/assets/gallery/inauguration-lamp-lighting.jpeg';
-import inaugFelicitationImg from '@/assets/gallery/inauguration-felicitation.jpeg';
-import winnerPranavCollageImg from '@/assets/gallery/winner-pranav-khot-collage.jpeg';
-import winnerTukendraCollageImg from '@/assets/gallery/winner-tukendra-golegaonkar-collage.jpeg';
-import certificatePranavImg from '@/assets/gallery/certificate-pranav-khot.jpeg';
-
 const fadeInUp = {
     initial: { opacity: 0, y: 24 },
     whileInView: { opacity: 1, y: 0 },
@@ -17,27 +10,64 @@ const fadeInUp = {
 };
 
 // ------------------------------------------------------------------
-// Replace this array with real previous-year event photos.
-// Each item: { src, alt, year }. Drop images in src/assets/gallery/
-// and import them the same way heroImg is imported above.
+// HOW TO ADD PHOTOS: just drop image files (.jpg .jpeg .png .webp) into
+// src/assets/gallery/ — they appear automatically, 8 per page.
+// Caption defaults to the file name (e.g. "team-photo.jpeg" -> "Team photo").
+// Optional: add a nicer caption below in CAPTIONS (key = exact file name).
+// New photos show after the ones listed in ORDER, sorted by file name.
 // ------------------------------------------------------------------
+const GALLERY_YEAR = '2026';
+const PER_PAGE = 8;
+
+const CAPTIONS: Record<string, string> = {
+    'inauguration-lamp-lighting.jpeg': 'Inauguration lamp-lighting ceremony, Department of Mechanical Engineering, Walchand College of Engineering, Sangli',
+    'inauguration-felicitation.jpeg': 'Felicitation of guests at the inauguration ceremony',
+    'inauguration-group-certificates.jpeg': 'Winning teams and organizers with certificates, AAYODHYAM 2025',
+    'winner-pranav-khot-collage.jpeg': 'Pranav Khot receiving the Certificate of Achievement, Winner of AAYODHYAM 2025 Metallurgy Hackathon Task',
+    'winner-tukendra-golegaonkar-collage.jpeg': 'Tukendra Golegaonkar receiving the Certificate of Achievement, Winner of AAYODHYAM 2025 Metallurgy Hackathon Task',
+    'certificate-pranav-khot.jpeg': 'Certificate of Achievement awarded to Pranav Khot, AAYODHYAM 2025',
+};
+
+// Files listed here come first, in this order. Everything else follows alphabetically.
+const ORDER = Object.keys(CAPTIONS);
+
 interface GalleryImage {
     src: string;
     alt: string;
     year: string;
 }
 
-const GALLERY_IMAGES: GalleryImage[] = [
-    { src: inaugLampImg, alt: 'Inauguration lamp-lighting ceremony, Department of Mechanical Engineering, Walchand College of Engineering, Sangli', year: '2025' },
-    { src: inaugFelicitationImg, alt: 'Felicitation of guests at the inauguration ceremony', year: '2025' },
-    { src: inaugGroupImg, alt: 'Winning teams and organizers with certificates, AAYODHYAM 2025', year: '2025' },
-    { src: winnerPranavCollageImg, alt: 'Pranav Khot receiving the Certificate of Achievement, Winner of AAYODHYAM 2025 Metallurgy Hackathon Task', year: '2025' },
-    { src: winnerTukendraCollageImg, alt: 'Tukendra Golegaonkar receiving the Certificate of Achievement, Winner of AAYODHYAM 2025 Metallurgy Hackathon Task', year: '2025' },
-    { src: certificatePranavImg, alt: 'Certificate of Achievement awarded to Pranav Khot, AAYODHYAM 2025', year: '2025' },
-];
+const modules = import.meta.glob('/src/assets/gallery/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}', {
+    eager: true,
+    query: '?url',
+    import: 'default',
+}) as Record<string, string>;
+
+const prettify = (file: string) => {
+    const base = file.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    return base.charAt(0).toUpperCase() + base.slice(1);
+};
+
+const GALLERY_IMAGES: GalleryImage[] = Object.entries(modules)
+    .map(([path, src]) => ({ file: path.split('/').pop() as string, src }))
+    .sort((a, b) => {
+        const ia = ORDER.indexOf(a.file);
+        const ib = ORDER.indexOf(b.file);
+        if (ia !== -1 || ib !== -1) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
+        return a.file.localeCompare(b.file, undefined, { numeric: true });
+    })
+    .map(({ file, src }) => ({ src, alt: CAPTIONS[file] ?? prettify(file), year: GALLERY_YEAR }));
 
 export default function GalleryPage() {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [page, setPage] = useState(1);
+    const totalPages = Math.max(1, Math.ceil(GALLERY_IMAGES.length / PER_PAGE));
+    const start = (page - 1) * PER_PAGE;
+    const pageImages = GALLERY_IMAGES.slice(start, start + PER_PAGE);
+    const goToPage = (n: number) => {
+        setPage(n);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
 
     const close = useCallback(() => setLightboxIndex(null), []);
     const prev = useCallback(
@@ -81,32 +111,67 @@ export default function GalleryPage() {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                    {GALLERY_IMAGES.map((img, i) => (
-                        <motion.button
-                            key={i}
-                            {...fadeInUp}
-                            transition={{ duration: 0.35, delay: (i % 8) * 0.04 }}
-                            onClick={() => setLightboxIndex(i)}
-                            className="group relative aspect-square overflow-hidden rounded-xl bg-metal-100 border border-metal-100 focus:outline-none focus:ring-2 focus:ring-gold-400"
-                        >
-                            <img
-                                src={img.src}
-                                alt={img.alt}
-                                loading="lazy"
-                                decoding="async"
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            />
-                            <div className="absolute inset-0 bg-navy-950/0 group-hover:bg-navy-950/40 transition-colors duration-300 flex items-end">
-                                <span className="w-full p-2.5 text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 truncate">
-                                    {img.alt}
+                    {pageImages.map((img, idx) => {
+                        const i = start + idx;
+                        return (
+                            <motion.button
+                                key={i}
+                                {...fadeInUp}
+                                transition={{ duration: 0.35, delay: idx * 0.04 }}
+                                onClick={() => setLightboxIndex(i)}
+                                className="group relative aspect-square overflow-hidden rounded-xl bg-metal-100 border border-metal-100 focus:outline-none focus:ring-2 focus:ring-gold-400"
+                            >
+                                <img
+                                    src={img.src}
+                                    alt={img.alt}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                />
+                                <div className="absolute inset-0 bg-navy-950/0 group-hover:bg-navy-950/40 transition-colors duration-300 flex items-end">
+                                    <span className="w-full p-2.5 text-xs font-medium text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 truncate">
+                                        {img.alt}
+                                    </span>
+                                </div>
+                                <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-navy-950/70 text-gold-300">
+                                    {img.year}
                                 </span>
-                            </div>
-                            <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-navy-950/70 text-gold-300">
-                                {img.year}
-                            </span>
-                        </motion.button>
-                    ))}
+                            </motion.button>
+                        );
+                    })}
                 </div>
+
+                {totalPages > 1 && (
+                    <nav aria-label="Gallery pages" className="mt-10 flex flex-wrap items-center justify-center gap-2">
+                        <button
+                            onClick={() => goToPage(page - 1)}
+                            disabled={page === 1}
+                            className="px-3 py-2 rounded-lg border border-metal-200 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-metal-100 transition-colors"
+                        >
+                            Prev
+                        </button>
+                        {Array.from({ length: totalPages }, (_, n) => n + 1).map((n) => (
+                            <button
+                                key={n}
+                                onClick={() => goToPage(n)}
+                                aria-current={n === page ? 'page' : undefined}
+                                className={`w-9 h-9 rounded-lg text-sm font-semibold transition-colors ${n === page
+                                        ? 'bg-navy-950 text-gold-300'
+                                        : 'border border-metal-200 hover:bg-metal-100'
+                                    }`}
+                            >
+                                {n}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => goToPage(page + 1)}
+                            disabled={page === totalPages}
+                            className="px-3 py-2 rounded-lg border border-metal-200 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-metal-100 transition-colors"
+                        >
+                            Next
+                        </button>
+                    </nav>
+                )}
             </div>
 
             {/* Lightbox */}
