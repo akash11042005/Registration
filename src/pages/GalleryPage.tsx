@@ -85,7 +85,12 @@ const GALLERY_IMAGES: GalleryImage[] = Object.entries(modules)
         if (ia !== -1 || ib !== -1) return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
         return a.file.localeCompare(b.file, undefined, { numeric: true });
     })
-    .map(({ file, src }) => ({ src, alt: CAPTIONS[file] ?? prettify(file), year: GALLERY_YEAR }));
+    .map(({ file, src }) => ({
+        src,
+        alt: CAPTIONS[file] ?? prettify(file),
+        // Old (2025) photos are the entries in CAPTIONS that don't start with "2026-".
+        year: file in CAPTIONS && !file.startsWith('2026-') ? '2025' : GALLERY_YEAR,
+    }));
 
 export default function GalleryPage() {
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
