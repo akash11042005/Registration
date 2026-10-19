@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, X, ChevronRight, FlaskConical, Users, AlertCircle, Info, ArrowRight, Phone } from 'lucide-react';
+import { Search, Filter, X, ChevronRight, FlaskConical, Users, AlertCircle, Info, ArrowRight, Phone, Trophy } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
-import { PROBLEM_STATEMENTS, ProblemStatement } from '@/lib/problemStatements';
+import { PROBLEM_STATEMENTS, PROBLEM_WINNERS, ProblemStatement } from '@/lib/problemStatements';
 import { useTaskRegistrationCounts } from '@/hooks/useFirestore';
 import { MAX_TEAMS_PER_TASK } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -57,6 +57,20 @@ function ProblemDetailModal({
 
         {/* Body */}
         <div className="px-6 py-5 space-y-6">
+          {/* Winner */}
+          {PROBLEM_WINNERS[ps.id] && (
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-gold-300 bg-gradient-to-br from-gold-50 to-amber-50">
+              <div className="w-10 h-10 rounded-full bg-navy-900 flex items-center justify-center shrink-0">
+                <Trophy className="w-5 h-5 text-gold-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-gold-700 uppercase tracking-wider">Winner</p>
+                <p className="font-bold text-navy-900 leading-tight">{PROBLEM_WINNERS[ps.id].team}</p>
+                <p className="text-sm text-metal-600">{PROBLEM_WINNERS[ps.id].college}</p>
+              </div>
+            </div>
+          )}
+
           {/* Capacity */}
           <div className={cn(
             'flex items-center gap-3 p-3 rounded-xl border',
@@ -170,6 +184,19 @@ function ProblemCard({
         {ps.title}
       </h3>
       <p className="text-sm text-metal-600 leading-relaxed line-clamp-2 mb-4">{ps.objective}</p>
+
+      {PROBLEM_WINNERS[ps.id] && (
+        <div className="flex items-center gap-2.5 p-2.5 mb-4 rounded-lg border border-gold-300 bg-gradient-to-br from-gold-50 to-amber-50">
+          <div className="w-8 h-8 rounded-full bg-navy-900 flex items-center justify-center shrink-0">
+            <Trophy className="w-4 h-4 text-gold-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold text-gold-700 uppercase tracking-wider leading-none mb-0.5">Winner</p>
+            <p className="text-sm font-bold text-navy-900 leading-tight truncate">{PROBLEM_WINNERS[ps.id].team}</p>
+            <p className="text-xs text-metal-600 leading-tight truncate">{PROBLEM_WINNERS[ps.id].college}</p>
+          </div>
+        </div>
+      )}
 
       {/* Slot indicator */}
       <div className="mb-3">

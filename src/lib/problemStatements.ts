@@ -184,3 +184,26 @@ export const CATEGORIES: { value: string; label: string }[] = [
   { value: 'Computation & AI', label: 'Computation & AI' },
   { value: 'Phase Transformations', label: 'Phase Transformations' },
 ];
+
+// ============================================================
+// Winners — one team per problem statement, keyed by problem id.
+// Shown on the Problem Statements page (card + detail popup).
+// To correct a name, just edit it here.
+// ============================================================
+export interface ProblemWinner {
+  team: string;
+  college: string;
+}
+
+export const PROBLEM_WINNERS: Record<number, ProblemWinner> = {
+  1: { team: 'The Lone Ferrite', college: 'Walchand College of Engineering, Sangli' },
+  2: { team: 'True Strainers', college: 'Cummins College of Engineering' },
+  3: { team: 'Steel Syndicate', college: 'COEP Technological University, Pune' },
+  4: { team: 'Heatsmiths', college: 'Cummins College of Engineering' },
+  5: { team: 'NodX', college: 'D Y Patil College, Kolhapur' },
+  6: { team: 'Metallix', college: 'Walchand College of Engineering, Sangli' },
+  7: { team: 'Ferro Sense', college: 'Walchand College of Engineering, Sangli' },
+  8: { team: 'Forgex', college: 'Walchand College of Engineering, Sangli' },
+  9: { team: 'Team Meta Forge', college: 'COEP Technological University, Pune' },
+  10: { team: 'Code Crafters', college: 'Shree Vithal Education and Research Institute, Pandharpur' },
+};
